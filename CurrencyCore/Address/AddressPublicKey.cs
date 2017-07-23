@@ -49,5 +49,9 @@
         {
             return this.Base58String;
         }
+        public string AsHexString()
+        {
+            return ByteArrayUtil.ByteArrayToHexString(this.Value.Hash.GetBytesWithChecksum());
+        }
     }
 }

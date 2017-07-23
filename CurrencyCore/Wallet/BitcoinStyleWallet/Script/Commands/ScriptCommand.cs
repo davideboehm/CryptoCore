@@ -2,8 +2,14 @@
 {
     using System.Collections.Generic;
     using CurrencyCore.Wallet.BitcoinStyleWallet.Script.Data;
+    using System;
 
-    public abstract class ScriptCommand
+    public enum ScriptResult
+    {
+        Success,
+        Fail
+    }
+    public abstract class ScriptCommand : SerializableBase
     {
         public readonly byte OpCode; 
         public readonly ScriptData Data;
@@ -13,17 +19,29 @@
             this.OpCode = opCode;
             this.Data = data;
         }
-        
+
+        protected ScriptCommand(byte opCode) : this(opCode, ScriptData.Nothing)
+        {
+        }
+
         /// <summary>
         /// the size is any data you push plus one for the opcode
         /// </summary>
-        public virtual int Size => this.Data.Size + 1;
+        public override int Size => this.Data.Size + 1;
 
-        public abstract Stack<ScriptData> Execute(Stack<ScriptData> currentState);
+        public virtual ScriptResult Execute(ScriptProgramStack currentState)
+        {
+            return ScriptResult.Success;
+        }
 
-        public virtual void Serialize(byte[] buffer, int offset = 0)
+        public override int Serialize(byte[] buffer, int offset = 0)
         {
             buffer[offset++] = this.OpCode;
-        }
+            if (this.Data != null && this.Data != ScriptData.Nothing)
+            {
+                this.Data.Serialize(buffer, offset);
+            }
+            return 1 + this.Data.Size;
+        }        
     }
 }

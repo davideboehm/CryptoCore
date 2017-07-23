@@ -36,7 +36,7 @@ namespace ExchangesCore
             var stockAbbreviation = CoinInfo.GetCoinInfo(this.StockCoin).GetAbbreviations()[0];
             var currencyAbbreviation = CoinInfo.GetCoinInfo(this.CurrencyCoin).GetAbbreviations()[0];
 
-            return $"{verb} {Amount} {stockAbbreviation} at {this.Price} {currencyAbbreviation} per {stockAbbreviation} on {this.DateCompleted}";
+            return $"{verb} {Amount} {stockAbbreviation} for {this.Price} {currencyAbbreviation} per {stockAbbreviation} on {this.DateCompleted}";
         }
 
         public static implicit operator Trade(CompletedTrade completedTrade)

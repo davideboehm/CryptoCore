@@ -1,5 +1,7 @@
 ﻿namespace CurrencyCore.Coin
 {
+    using Core;
+    using CurrencyCore.Address;
     using System;
     using System.Collections.Generic;
     using System.Linq;
@@ -21,6 +23,9 @@
         Vericoin,
         Verium,
         ZCash
+    }
+    public static class CoinTypeExtensions
+    {
     }
     public abstract class CoinInfo
     {

@@ -10,7 +10,7 @@
         public static CoinAmount Zero = (CoinAmount)decimal.Zero;
         private decimal value;
 
-        public static explicit operator CoinAmount(decimal amount)
+        public static implicit operator CoinAmount(decimal amount)
         {
             return new CoinAmount { value = Math.Round(amount, 8) };
         }

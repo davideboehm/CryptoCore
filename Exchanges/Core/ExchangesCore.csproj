@@ -49,9 +49,9 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="CompletedTrade.cs" />
-    <Compile Include="ExchangeAPICallers\GetCall.cs" />
-    <Compile Include="ExchangeAPICallers\HmacSha512SignedPostCall.cs" />
-    <Compile Include="ExchangeAPICallers\RestCall.cs" />
+    <Compile Include="ExchangeAPICallers\GetCaller.cs" />
+    <Compile Include="ExchangeAPICallers\SignedPostCaller.cs" />
+    <Compile Include="ExchangeAPICallers\ApiCaller.cs" />
     <Compile Include="ExchangeBase.cs" />
     <Compile Include="Fee.cs" />
     <Compile Include="IExchange.cs" />

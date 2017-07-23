@@ -130,7 +130,7 @@
             {
                 result.Append(string.Format("{0:X2}", ba[i]));
             }
-            return result.ToString();
+            return "0x"+result.ToString();
         }
     }
 }

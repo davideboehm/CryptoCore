@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 using CurrencyCore.Address;
 using CurrencyCore.Coin;
@@ -15,13 +14,11 @@ namespace ExchangesCore
         private MemoryCache dataCache;
         private Dictionary<string, AutoResetEvent> dataCacheLocks = new Dictionary<string, AutoResetEvent>();
 
-        public abstract ValueTask<bool> ExecuteTrade(Trade trade, Price price, CoinAmount amount, bool postOnly = false);
+        public abstract ValueTask<bool> ExecuteTrade(Trade trade, Price price, CoinAmount amount);
         public abstract ValueTask<CoinAmount?> GetBalance(CoinType coinType);
-        public abstract ValueTask<Dictionary<CoinType, CoinAmount>> GetBalances();
+        public abstract ValueTask<Dictionary<CoinType, CoinAmount>> GetBalances(bool ignoreCache = false);
         public abstract ValueTask<Dictionary<CoinType, ICollection<CoinType>>> GetBuyMarkets();
         public abstract ValueTask<(Fee? maker, Fee? taker)> GetCurrentTradeFees();
-        public abstract ValueTask<Price?> GetEstimatedBuyExchangeRate(CoinType stockCoin, CoinType currencyCoin);
-        public abstract ValueTask<Price?> GetEstimatedSellExchangeRate(CoinType stockCoin, CoinType currencyCoin);
         public abstract ValueTask<List<LoanOffer>> GetLoanOrderBook(CoinType currencyType, int depth = 50);
         public abstract ValueTask<(Dictionary<CoinType, ICollection<CoinType>> buyMarkets, Dictionary<CoinType, ICollection<CoinType>> sellMarkets)> GetMarkets();
         public abstract ValueTask<(List<(Price, CoinAmount)> asks, List<(Price, CoinAmount)> bids)> GetOrderBook(CoinType stockType, CoinType currencyType, int depth = 50);
@@ -35,80 +32,79 @@ namespace ExchangesCore
             this.dataCache = new MemoryCache(className + Thread.CurrentThread.ManagedThreadId);
         }
 
-        protected PriceRange? GetEstimatedExchangeRate(List<CompletedTrade> history, List<(Price, CoinAmount)> offers)
+        public virtual async ValueTask<(PriceRange? sellPrice, PriceRange? buyPrice)> GetEstimatedExchangeRates(CoinType stockCoin, CoinType currencyCoin)
         {
-            if (history == null || offers == null)
+            var history = await this.GetTradeHistory(stockCoin, currencyCoin);
+
+            var (asks, bids) = await this.GetOrderBook(stockCoin, currencyCoin);
+            return this.GetEstimatedExchangeRate(history, bids, asks);
+        }
+
+        protected (PriceRange?, PriceRange?) GetEstimatedExchangeRate(List<CompletedTrade> history, List<(Price, CoinAmount)> bids, List<(Price, CoinAmount)>  asks)
+        {
+            if (history == null || bids == null || asks == null)
             {
-                return null;
+                return (null,null);
             }
 
-            var averagedValues = new List<Price>();
             var firstDeriv = new List<Price>();
             var averageTradeAmount = history.Average((trade) => trade.Amount);
-
-            var retainedTotal = 0M;
-            var retainedWeight = 0M;
-            for (int i = 0; i < history.Count - 1 && averagedValues.Count < 10; i++)
+            var start = history.Last().DateCompleted;
+            var end = history.First().DateCompleted;
+            var timeWeight = (end - start).TotalSeconds / history.Count;
+            var totalWeight = 0M;
+            var weightedTotalPrice = 0M;
+            for (int i = 0; i < history.Count && i < 40; i++)
             {
-                var currentTotal = retainedTotal;
-                var currentWeightedTotal = retainedWeight;
-
-                while (currentTotal < averageTradeAmount && i < history.Count)
-                {
-                    if (currentTotal + history[i].Amount > averageTradeAmount)
-                    {
-                        retainedTotal = history[i].Amount + currentTotal - averageTradeAmount;
-                        retainedWeight = retainedTotal * history[i].Price;
-
-                        if (retainedTotal > averageTradeAmount)
-                        {
-                            averagedValues.Add(retainedWeight / retainedTotal);
-                            retainedTotal = 0M;
-                            retainedWeight = 0M;
-                        }
-
-                        currentWeightedTotal += history[i].Price * (history[i].Amount - retainedTotal);
-                        currentTotal += (history[i].Amount - retainedTotal);
-                    }
-                    else
-                    {
-                        retainedTotal = 0M;
-                        retainedWeight = 0M;
-
-                        currentWeightedTotal += history[i].Price * history[i].Amount;
-                        currentTotal += history[i].Amount;
-                    }
-                    i++;
-                }
-                averagedValues.Add(currentWeightedTotal / currentTotal);
+                var weight = history[i].Amount * (decimal) ((history[i].DateCompleted - start).TotalSeconds / timeWeight);
+                totalWeight += weight;
+                weightedTotalPrice += history[i].Price * weight;
             }
-            for (int i = 0; i < 10 && i < averagedValues.Count - 1; i++)
-            {
-                firstDeriv.Add(averagedValues[i] - averagedValues[i + 1]);
-            }
+            var averagePrice = (double)(weightedTotalPrice / totalWeight);
+            var variance = history.Take(40).Average(historyItem =>((double)(historyItem.Price - averagePrice)* (double)(historyItem.Price - averagePrice)));
+            Price stdDeviation = Math.Sqrt(variance);
 
-            var averageBid = this.GetWeightedAverage(offers, 15, averageTradeAmount * 5);
-            var averagePrice = averagedValues.Average(price => (double)price);
-            var variation = Math.Sqrt(averagedValues.Average(price => (averagePrice - (double)price) * (averagePrice - (double)price)));
-            var median = .5 * averagePrice + .5 * (double)averageBid;
-            return new PriceRange((Price)(median - variation), (Price)(median + variation));
+            var averageBid = this.GetWeightedAverage(bids, 15, averageTradeAmount * 5);
 
+            var averageAsk = this.GetWeightedAverage(asks, 15, averageTradeAmount * 5);
+
+            var buyMedian = .10 * averagePrice + .90 * (.10 * averageBid + .90 * averageAsk);
+            var sellMedian = .10 * averagePrice + .90 * (.10 * averageAsk + .90 * averageBid);
+            return (new PriceRange(sellMedian, stdDeviation),
+                    new PriceRange(buyMedian, stdDeviation));
         }
+
         private Price GetWeightedAverage(List<(Price price, CoinAmount amount)> values, int depth = 50, decimal weightDepth = 0)
         {
-            var total = 0M;
+            var weight = 0M;
             var weightedTotal = 0M;
-            for (int i = 0; i < depth && i < values.Count && (weightDepth != 0 && total < weightDepth); i++)
+            for (int i = 0; i < depth && i < values.Count && (weightDepth != 0 && weight < weightDepth); i++)
             {
-                total += values[i].amount;
+                weight += values[i].amount;
                 weightedTotal += values[i].price * values[i].amount;
             }
 
-            return weightedTotal / total;
+            return weightedTotal / weight;
         }
-        protected async ValueTask<T> GetValueFromCache<T>(string key, Func<ValueTask<T>> fallback, int secondsTilExpiration = 10)
+        
+        protected async ValueTask<T> GetValue<T>(string key, Func<ValueTask<T>> fallback, int secondsTilExpiration = 10, bool ignoreCachedValue = false)
         {
+            AutoResetEvent lockObject = this.GetLockObject(key);
             T result;
+            if (!ignoreCachedValue && this.TryGetValueCommon(key, out T cachedResult))
+            {
+                result = cachedResult;
+            }
+            else
+            {
+                result = await fallback();
+                UpdateCache(key, result, secondsTilExpiration);
+            }
+            lockObject.Set();
+            return result;
+        }
+        private AutoResetEvent GetLockObject(string key)
+        {
             AutoResetEvent lockObject;
 
             lock (dataCacheLocks)
@@ -119,68 +115,28 @@ namespace ExchangesCore
                     dataCacheLocks.Add(key, lockObject);
                 }
             }
-            lockObject.WaitOne();
-
-            if (this.TryGetItemFromCache(key, out T cachedResult))
-            {
-                result = cachedResult;
-            }
-            else
-            {
-                result = await fallback(); if (result != null)
-                {
-                    this.dataCache.Add(new CacheItem(key, result), new CacheItemPolicy()
-                    {
-                        AbsoluteExpiration = DateTimeOffset.UtcNow + new TimeSpan(0, 0, secondsTilExpiration)
-                    });
-                }
-            }
-            lockObject.Set();
-            return result;
+            return lockObject;
         }
-        protected T GetValueFromCache<T>(string key, Func<T> fallback, int secondsTilExpiration = 10)
+        private void UpdateCache<T>(string key, T value, int secondsTilExpiration)
         {
-            T result;
-            AutoResetEvent lockObject;
-            lock (dataCacheLocks)
+            if (value != null)
             {
-                if (!dataCacheLocks.TryGetValue(key, out lockObject))
+                this.dataCache.Add(new CacheItem(key, value), new CacheItemPolicy()
                 {
-                    lockObject = new AutoResetEvent(true);
-                    dataCacheLocks.Add(key, lockObject);
-                }
+                    AbsoluteExpiration = DateTimeOffset.UtcNow + new TimeSpan(0, 0, secondsTilExpiration)
+                });
             }
-
-            lockObject.WaitOne();
-
-            if (this.TryGetItemFromCache(key, out T cachedResult))
-            {
-                result = cachedResult;
-            }
-            else
-            {
-                result = fallback();
-                if (result != null)
-                {
-                    this.dataCache.Add(new CacheItem(key, result), new CacheItemPolicy()
-                    {
-                        AbsoluteExpiration = DateTimeOffset.UtcNow + new TimeSpan(0, 0, secondsTilExpiration)
-                    });
-                }
-            }
-            lockObject.Set();
-            return result;
         }
 
-        protected bool TryGetItemFromCache<T>(string key, out T item)
+        private bool TryGetValueCommon<T>(string key, out T result)
         {
             if (this.dataCache.Contains(key))
             {
-                item = (T)this.dataCache[key];
+                result = (T)this.dataCache[key];
                 return true;
             }
-            item = default(T);
-            return false;
+            result = default(T);
+            return false;          
         }
     }
 }

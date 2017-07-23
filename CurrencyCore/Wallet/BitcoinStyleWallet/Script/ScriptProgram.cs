@@ -1,21 +1,22 @@
 ﻿namespace CurrencyCore.Wallet.BitcoinStyleWallet.Script
 {
     using CurrencyCore.Wallet.BitcoinStyleWallet.Script.Commands;
-    using System;
     using System.Collections.Generic;
     using System.Linq;
-    using System.Runtime.Serialization;
+    using System;
 
-    public class ScriptProgram
+    public class ScriptProgram : ISerializable
     {
-        public List<ScriptCommand> Commands;
-
-        public void GetObjectData(SerializationInfo info, StreamingContext context)
+        public int Size
         {
-            throw new NotImplementedException();
+            get
+            {
+                return Commands.Sum(command => command.Size);
+            }
         }
 
-        public byte[] Serialize()
+        public List<ScriptCommand> Commands;
+        public byte[] GetBytes()
         {
             var size = this.Commands.Sum(entity => entity.Size);
             var result = new byte[size];
@@ -26,6 +27,33 @@
                 offset += entity.Size;
             }
             return result;
+        }
+
+        public int Serialize(byte[] buffer, int offset = 0)
+        {
+            var total = 0;
+            foreach (var entity in this.Commands)
+            {
+                total += entity.Serialize(buffer, offset + total);                
+            }
+            return total;
+        }
+
+        public ScriptResult Evaluate()
+        {
+            ScriptProgramStack stack = new ScriptProgramStack();
+            return Evaluate(stack);
+        }
+        public ScriptResult Evaluate(ScriptProgramStack stack)
+        {
+            foreach (ScriptCommand currentCommand in Commands)
+            {
+                if (currentCommand.Execute(stack) == ScriptResult.Fail)
+                {
+                    return ScriptResult.Fail;
+                }
+            }
+            return (stack.Count == 0 || stack.Peek().IsTrue()) ? ScriptResult.Success : ScriptResult.Fail;
         }
     }
 }

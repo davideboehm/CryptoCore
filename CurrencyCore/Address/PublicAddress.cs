@@ -7,7 +7,7 @@
     public class PublicAddress
     {
         public CoinType AddressType;
-
+        public readonly bool IsHex;
         protected Lazy<AddressPublicKey> LazyPublicKey;
 
         public PublicAddress()
@@ -21,7 +21,13 @@
         }
         public PublicAddress(String key, CoinType addressType)
         {
-            this.LazyPublicKey = new Lazy<AddressPublicKey>(() => new AddressPublicKey(Base58.CreateBase58FromStringWithChecksum(key)));
+            this.IsHex = (key.StartsWith("0x") || key.StartsWith("0X"));
+            this.LazyPublicKey = new Lazy<AddressPublicKey>(() =>
+            {            
+                return this.IsHex ?
+                    new AddressPublicKey(new HashWithChecksum(ByteArrayUtil.HexStringToByteArray(key))) : 
+                    new AddressPublicKey(Base58.CreateBase58FromStringWithChecksum(key));
+            });
             this.AddressType = addressType;
         }
 
@@ -34,10 +40,17 @@
         {
             return this.PublicKey.Value.Hash.GetBytesWithChecksum();
         }
-
         public override string ToString()
         {
+            if (this.IsHex)
+            {
+                return this.AsHexString();
+            }
             return this.PublicKey.ToString();
+        }
+        public string AsHexString()
+        {
+            return this.PublicKey.AsHexString();
         }
     }
 }
