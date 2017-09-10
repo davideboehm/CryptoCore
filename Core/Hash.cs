@@ -2,6 +2,7 @@
 {
     using System;
     using System.Security.Cryptography;
+    using System.Text;
 
     public class Hash
     {
@@ -29,6 +30,101 @@
         }
         protected HashWithoutChecksum()
         {
+        }
+        public override string ToString()
+        {
+            StringBuilder sb = new StringBuilder();
+            foreach (byte b in this.ValueWithoutChecksum)
+            {
+                sb.Append(ConvertToBits(b));
+            }
+            sb.Remove(sb.Length - 1, 1);
+            return sb.ToString();
+        }
+        private static string ConvertToBits(byte currentByte)
+        {
+            var result = new StringBuilder();
+            if (currentByte >= 128)
+            {
+                result.Insert(0, "1");
+                currentByte -= 128;
+            }
+            else
+            {
+                result.Insert(0, "0");
+            }
+
+            if (currentByte >= 64)
+            {
+                result.Insert(0, "1");
+                currentByte -= 64;
+            }
+            else
+            {
+                result.Insert(0, "0");
+            }
+
+            if (currentByte >= 32)
+            {
+                result.Insert(0, "1");
+                currentByte -= 32;
+            }
+            else
+            {
+                result.Insert(0, "0");
+            }
+
+            if (currentByte >= 16)
+            {
+                result.Insert(0, "1");
+                currentByte -= 16;
+            }
+            else
+            {
+                result.Insert(0, "0");
+            }
+
+            if (currentByte >= 8)
+            {
+                result.Insert(0, "1");
+                currentByte -= 8;
+            }
+            else
+            {
+                result.Insert(0, "0");
+            }
+
+            if (currentByte >= 4)
+            {
+                result.Insert(0, "1");
+                currentByte -= 4;
+            }
+            else
+            {
+                result.Insert(0, "0");
+            }
+
+            if (currentByte >= 2)
+            {
+                result.Insert(0, "1");
+                currentByte -= 2;
+            }
+            else
+            {
+                result.Insert(0, "0");
+            }
+
+            if (currentByte >= 1)
+            {
+                result.Insert(0, "1");
+                currentByte -= 1;
+            }
+            else
+            {
+                result.Insert(0, "0");
+            }
+
+            return result.ToString();
         }
     }
     public class HashWithChecksum : HashWithoutChecksum

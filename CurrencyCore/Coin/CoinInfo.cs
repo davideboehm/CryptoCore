@@ -10,6 +10,7 @@
     {
         None,
         Bitcoin,
+        BitcoinCash,
         Dash,
         DigiByte,
         Ethereum,

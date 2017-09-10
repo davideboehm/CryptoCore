@@ -412,7 +412,37 @@
         }
         private string GetCurrencyPair(CoinType stockType, CoinType currencyType)
         {
-            return $"{CoinInfo.GetDefaultAbbreviation(currencyType)}_{CoinInfo.GetDefaultAbbreviation(stockType)}";
+            return $"{GetCurrencyAbbreviation(currencyType)}_{GetCurrencyAbbreviation(stockType)}";
+        }
+        private static string GetCurrencyAbbreviation(CoinType coinType)
+        {
+            switch (coinType)
+            {
+                case CoinType.None:
+                case CoinType.Bitcoin:
+                case CoinType.Dash:
+                case CoinType.DigiByte:
+                case CoinType.Ethereum:
+                case CoinType.EthereumClassic:
+                case CoinType.Factom:
+                case CoinType.Litecoin:
+                case CoinType.Monero:
+                case CoinType.Ripple:
+                case CoinType.Stellar:
+                case CoinType.USDTether:
+                case CoinType.Vericoin:
+                case CoinType.Verium:
+                case CoinType.ZCash:
+                    {
+                        return CoinInfo.GetDefaultAbbreviation(coinType);
+                    }
+                case CoinType.BitcoinCash:
+                    {
+                        return CoinInfo.GetCoinInfo(coinType).GetAbbreviations()[1];
+                    }
+            }
+        
+            return "";
         }
         
         private async ValueTask<T> SendCommand<T>(string method, Dictionary<string, string> paramDictionary = null) where T : class
