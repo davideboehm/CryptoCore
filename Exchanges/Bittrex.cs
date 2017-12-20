@@ -60,7 +60,7 @@
                 this.accountCaller = new PrivateCaller(new Uri(BaseUrl + "account/"), logger, apiKeys, RequestQueue);
                 this.marketCaller = new PrivateCaller(new Uri(BaseUrl + "market/"), logger, apiKeys, RequestQueue);
             }
-            this.publicCaller = new GetCaller(new Uri(BaseUrl + "public/"), logger, RequestQueue);
+            this.publicCaller = new SimpleGetCaller(new Uri(BaseUrl + "public/"), logger, RequestQueue);
         }
 
         public override async ValueTask<(Fee? maker, Fee? taker)> GetCurrentTradeFees()

@@ -40,38 +40,47 @@ namespace ExchangesCore
             return this.GetEstimatedExchangeRate(history, bids, asks);
         }
 
-        protected (PriceRange?, PriceRange?) GetEstimatedExchangeRate(List<CompletedTrade> history, List<(Price, CoinAmount)> bids, List<(Price, CoinAmount)>  asks)
+        protected (PriceRange?, PriceRange?) GetEstimatedExchangeRate(List<CompletedTrade> history, List<(Price, CoinAmount)> bids, List<(Price, CoinAmount)> asks)
         {
-            if (history == null || bids == null || asks == null)
+            try
             {
-                return (null,null);
-            }
+                if (history != null && history.Count > 0 && bids != null && asks != null)
+                {
 
-            var firstDeriv = new List<Price>();
-            var averageTradeAmount = history.Average((trade) => trade.Amount);
-            var start = history.Last().DateCompleted;
-            var end = history.First().DateCompleted;
-            var timeWeight = (end - start).TotalSeconds / history.Count;
-            var totalWeight = 0M;
-            var weightedTotalPrice = 0M;
-            for (int i = 0; i < history.Count && i < 40; i++)
+                    var firstDeriv = new List<Price>();
+                    var averageTradeAmount = history.Average((trade) => trade.Amount);
+                    var start = history.Last().DateCompleted;
+                    var end = history.First().DateCompleted;
+                    var timeWeight = Math.Max((end - start).TotalSeconds / history.Count, 1);
+                    var totalWeight = 0M;
+                    var weightedTotalPrice = 0M;
+                    for (int i = 0; i < history.Count && i < 40; i++)
+                    {
+                        var weight = history[i].Amount * (decimal)((history[i].DateCompleted - start).TotalSeconds / timeWeight);
+                        totalWeight += weight;
+                        weightedTotalPrice += history[i].Price * weight;
+                    }
+                    if (totalWeight > 0)
+                    {
+                        var averagePrice = (double)(weightedTotalPrice / totalWeight);
+                        var variance = history.Take(40).Average(historyItem => ((double)(historyItem.Price - averagePrice) * (double)(historyItem.Price - averagePrice)));
+                        Price stdDeviation = Math.Sqrt(variance);
+
+                        var averageBid = this.GetWeightedAverage(bids, 15, averageTradeAmount * 5);
+
+                        var averageAsk = this.GetWeightedAverage(asks, 15, averageTradeAmount * 5);
+
+                        var buyMedian = .10 * averagePrice + .90 * (.10 * averageBid + .90 * averageAsk);
+                        var sellMedian = .10 * averagePrice + .90 * (.10 * averageAsk + .90 * averageBid);
+                        return (new PriceRange(sellMedian, stdDeviation),
+                                new PriceRange(buyMedian, stdDeviation));
+                    }
+                }
+            }
+            catch
             {
-                var weight = history[i].Amount * (decimal) ((history[i].DateCompleted - start).TotalSeconds / timeWeight);
-                totalWeight += weight;
-                weightedTotalPrice += history[i].Price * weight;
             }
-            var averagePrice = (double)(weightedTotalPrice / totalWeight);
-            var variance = history.Take(40).Average(historyItem =>((double)(historyItem.Price - averagePrice)* (double)(historyItem.Price - averagePrice)));
-            Price stdDeviation = Math.Sqrt(variance);
-
-            var averageBid = this.GetWeightedAverage(bids, 15, averageTradeAmount * 5);
-
-            var averageAsk = this.GetWeightedAverage(asks, 15, averageTradeAmount * 5);
-
-            var buyMedian = .10 * averagePrice + .90 * (.10 * averageBid + .90 * averageAsk);
-            var sellMedian = .10 * averagePrice + .90 * (.10 * averageAsk + .90 * averageBid);
-            return (new PriceRange(sellMedian, stdDeviation),
-                    new PriceRange(buyMedian, stdDeviation));
+            return (null, null);
         }
 
         private Price GetWeightedAverage(List<(Price price, CoinAmount amount)> values, int depth = 50, decimal weightDepth = 0)
@@ -89,19 +98,26 @@ namespace ExchangesCore
         
         protected async ValueTask<T> GetValue<T>(string key, Func<ValueTask<T>> fallback, int secondsTilExpiration = 10, bool ignoreCachedValue = false)
         {
-            AutoResetEvent lockObject = this.GetLockObject(key);
-            T result;
-            if (!ignoreCachedValue && this.TryGetValueCommon(key, out T cachedResult))
+            try
             {
-                result = cachedResult;
+                AutoResetEvent lockObject = this.GetLockObject(key);
+                T result;
+                if (!ignoreCachedValue && this.TryGetValueCommon(key, out T cachedResult))
+                {
+                    result = cachedResult;
+                }
+                else
+                {
+                    result = await fallback();
+                    UpdateCache(key, result, secondsTilExpiration);
+                }
+                lockObject.Set();
+                return result;
             }
-            else
+            catch
             {
-                result = await fallback();
-                UpdateCache(key, result, secondsTilExpiration);
+                return default(T);
             }
-            lockObject.Set();
-            return result;
         }
         private AutoResetEvent GetLockObject(string key)
         {

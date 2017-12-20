@@ -51,6 +51,8 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Bittrex.cs" />
+    <Compile Include="Gdax.cs" />
+    <Compile Include="Gemini.cs" />
     <Compile Include="Poloniex.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
