@@ -11,6 +11,7 @@ using Core;
 using System.Linq;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using Core.Functional;
 
 namespace Exchanges
 {
@@ -83,93 +84,32 @@ namespace Exchanges
             this.publicCaller = new SimpleGetCaller(new Uri(Url), logger, PublicRequestQueue);
         }
 
-        public override ValueTask<bool> ExecuteTrade(Trade trade, Price price, CoinAmount amount)
-        {
-            throw new System.NotImplementedException();
-        }
 
-        public override ValueTask<CoinAmount?> GetBalance(CoinType coinType)
-        {
-            throw new System.NotImplementedException();
-        }
-
-        public override ValueTask<Dictionary<CoinType, CoinAmount>> GetBalances(bool ignoreCache = false)
-        {
-            throw new System.NotImplementedException();
-        }
-
-        public override ValueTask<Dictionary<CoinType, ICollection<CoinType>>> GetBuyMarkets()
-        {
-            throw new System.NotImplementedException();
-        }
-
-        public override ValueTask<(Fee? maker, Fee? taker)> GetCurrentTradeFees()
-        {
-            throw new System.NotImplementedException();
-        }
-
-        public override ValueTask<List<LoanOffer>> GetLoanOrderBook(CoinType currencyType, int depth = 50)
-        {
-            throw new System.NotImplementedException();
-        }
-
-        public override async ValueTask<(Dictionary<CoinType, ICollection<CoinType>> buyMarkets, Dictionary<CoinType, ICollection<CoinType>> sellMarkets)> GetMarkets()
-        {
-            var resultContainer = await this.SendCommand<JContainer>("symbols");
-            return (null,null);
-        }
-
-        public override ValueTask<(List<(Price, CoinAmount)> asks, List<(Price, CoinAmount)> bids)> GetOrderBook(CoinType stockType, CoinType currencyType, int depth = 50)
-        {
-            throw new System.NotImplementedException();
-        }
-
-        public override ValueTask<Dictionary<string, (List<(Price, CoinAmount)> asks, List<(Price, CoinAmount)> bids)>> GetOrderBooks(int depth = 50)
-        {
-            throw new System.NotImplementedException();
-        }
-
-        public override ValueTask<Dictionary<CoinType, ICollection<CoinType>>> GetSellMarkets()
-        {
-            throw new System.NotImplementedException();
-        }
-
-        public override ValueTask<List<CompletedTrade>> GetTradeHistory(CoinType stockType, CoinType currencyType, int depth = 50)
-        {
-            throw new System.NotImplementedException();
-        }
-
-        public override ValueTask<string> Withdraw(PublicAddress address, CoinAmount amount)
-        {
-            throw new System.NotImplementedException();
-        }
-
-
-        private static string GetCurrencyAbbreviation(CoinType coinType)
+        private static string GetCurrencyAbbreviation(CurrencyType coinType)
         {
             switch (coinType)
             {
-                case CoinType.None:
-                case CoinType.Bitcoin:
-                case CoinType.Dash:
-                case CoinType.DigiByte:
-                case CoinType.Ethereum:
-                case CoinType.EthereumClassic:
-                case CoinType.Factom:
-                case CoinType.Litecoin:
-                case CoinType.Monero:
-                case CoinType.Ripple:
-                case CoinType.Stellar:
-                case CoinType.USDTether:
-                case CoinType.Vericoin:
-                case CoinType.Verium:
-                case CoinType.ZCash:
+                case CurrencyType.None:
+                case CurrencyType.Bitcoin:
+                case CurrencyType.Dash:
+                case CurrencyType.DigiByte:
+                case CurrencyType.Ethereum:
+                case CurrencyType.EthereumClassic:
+                case CurrencyType.Factom:
+                case CurrencyType.Litecoin:
+                case CurrencyType.Monero:
+                case CurrencyType.Ripple:
+                case CurrencyType.Stellar:
+                case CurrencyType.USDTether:
+                case CurrencyType.Vericoin:
+                case CurrencyType.Verium:
+                case CurrencyType.ZCash:
                     {
-                        return CoinInfo.GetDefaultAbbreviation(coinType);
+                        return CryptoCurrency.GetDefaultAbbreviation(coinType);
                     }
-                case CoinType.BitcoinCash:
+                case CurrencyType.BitcoinCash:
                     {
-                        return CoinInfo.GetCoinInfo(coinType).GetAbbreviations()[1];
+                        return CryptoCurrency.GetCryptoCurrency(coinType).GetAbbreviations()[1];
                     }
             }
 
@@ -218,6 +158,94 @@ namespace Exchanges
                 default:
                     throw new ArgumentException("Don't know if the requested method is a public or private api call:" + method);
             }
-        }    
+        }
+
+        public override ValueTask<bool> ExecuteTrade(Trade trade, Price price, CurrencyAmount amount)
+        {
+            throw new NotImplementedException();
+        }
+
+        public override ValueTask<Maybe<CurrencyAmount>> GetBalance(CurrencyType coinType)
+        {
+            throw new NotImplementedException();
+        }
+
+        public override ValueTask<Maybe<Dictionary<CurrencyType, CurrencyAmount>>> GetBalances(bool ignoreCache = false)
+        {
+            throw new NotImplementedException();
+        }
+
+        public override ValueTask<Maybe<Dictionary<CurrencyType, ICollection<CurrencyType>>>> GetBuyMarkets()
+        {
+            throw new NotImplementedException();
+        }
+
+        public override ValueTask<(Maybe<Fee> maker, Maybe<Fee> taker)> GetCurrentTradeFees()
+        {
+            throw new NotImplementedException();
+        }
+
+        public override ValueTask<Maybe<List<LoanOffer>>> GetLoanOrderBook(CurrencyType currencyType, int depth = 50)
+        {
+            throw new NotImplementedException();
+        }
+
+        public async override ValueTask<(Dictionary<CurrencyType, ICollection<CurrencyType>> buyMarkets, Dictionary<CurrencyType, ICollection<CurrencyType>> sellMarkets)> GetMarkets()
+        {
+            var resultContainer = await this.SendCommand<JContainer>("symbols");
+
+            var result = new Dictionary<CurrencyType, ICollection<CurrencyType>>();
+            var result1 = new Dictionary<CurrencyType, ICollection<CurrencyType>>();
+            foreach (JToken currencyPair in resultContainer)
+            {
+                if (currencyPair.Value<string>().Length == 6)
+                {
+                    var currency = CryptoCurrency.GetCurrencyType(currencyPair.Value<string>().Substring(0,3));
+                    var stock = CryptoCurrency.GetCurrencyType(currencyPair.Value<string>().Substring(3, 3));
+                    if (result.ContainsKey(stock))
+                    {
+                        result[stock].Add(currency);
+                    }
+                    else
+                    {
+                        result.Add(stock, new HashSet<CurrencyType>() { currency });
+                    }
+                    if (result1.ContainsKey(currency))
+                    {
+                        result1[currency].Add(stock);
+                    }
+                    else
+                    {
+                        result1.Add(currency, new HashSet<CurrencyType>() { stock });
+                    }
+                }
+            }
+            return (result, result1);
+        }
+
+        public override ValueTask<(Maybe<List<(Price, CurrencyAmount)>> asks, Maybe<List<(Price, CurrencyAmount)>> bids)> GetOrderBook(CurrencyType stockType, CurrencyType currencyType, int depth = 50)
+        {
+            throw new NotImplementedException();
+        }
+
+        public override ValueTask<Maybe<Dictionary<string, (List<(Price, CurrencyAmount)> asks, List<(Price, CurrencyAmount)> bids)>>> GetOrderBooks(int depth = 50)
+        {
+            throw new NotImplementedException();
+        }
+
+        public override ValueTask<Maybe<Dictionary<CurrencyType, ICollection<CurrencyType>>>> GetSellMarkets()
+        {
+            throw new NotImplementedException();
+        }
+
+        public override ValueTask<Maybe<List<CompletedTrade>>> GetTradeHistory(CurrencyType stockType, CurrencyType currencyType, int depth = 50)
+        {
+            throw new NotImplementedException();
+        }
+
+        public override ValueTask<string> Withdraw(PublicAddress address, CurrencyAmount amount)
+        {
+            throw new NotImplementedException();
+        }
     }    
 }

@@ -3,7 +3,7 @@
     using System;
     using System.Collections.Generic;
 
-    internal class Ethereum : CoinInfo
+    internal class Ethereum : CryptoCurrency
     {
         public override List<string> GetAbbreviations()
         {

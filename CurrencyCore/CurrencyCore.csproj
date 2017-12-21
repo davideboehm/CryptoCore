@@ -9,8 +9,9 @@
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>CurrencyCore</RootNamespace>
     <AssemblyName>CurrencyCore</AssemblyName>
-    <TargetFrameworkVersion>v4.6.2</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.7.1</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
+    <TargetFrameworkProfile />
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -56,10 +57,12 @@
     <Compile Include="Address\PublicAddress.cs" />
     <Compile Include="Address\WIFString.cs" />
     <Compile Include="Coin\CoinAmount.cs" />
-    <Compile Include="Coin\CoinInfo.cs" />
+    <Compile Include="Coin\CryptoCurrency.cs" />
     <Compile Include="Coin\Coins\BitcoinCash.cs" />
     <Compile Include="Coin\Coins\Bitcoin.cs" />
+    <Compile Include="Coin\Currency.cs" />
     <Compile Include="Coin\Coins\Dash.cs" />
+    <Compile Include="Coin\Coins\USD.cs" />
     <Compile Include="Coin\Coins\ZCash.cs" />
     <Compile Include="Coin\Coins\Verium.cs" />
     <Compile Include="Coin\Coins\Stellar.cs" />

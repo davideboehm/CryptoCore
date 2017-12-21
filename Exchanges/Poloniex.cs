@@ -12,11 +12,10 @@
     using CurrencyCore.Address;
     using ExchangesCore;
     using Newtonsoft.Json.Linq;
-    using System.Text;
-    using System.Security.Cryptography;
     using System.Net;
     using System.Linq;
     using System.Collections.Specialized;
+    using Core.Functional;
 
     public class Poloniex : ExchangeBase
     {
@@ -63,23 +62,25 @@
             this.publicCaller = new SimpleGetCaller(new Uri(PublicUrl), logger, RequestQueue);
         }
 
-        public override async ValueTask<(Fee? maker, Fee? taker)> GetCurrentTradeFees()
+        public override async ValueTask<(Maybe<Fee> maker, Maybe<Fee> taker)> GetCurrentTradeFees()
         {
             var resultContainer = await this.SendCommand<JContainer>("returnFeeInfo");
+
             if (resultContainer != null)
             {
-                var maker = new Fee(resultContainer.Value<Decimal>("makerfee"), CoinAmount.Zero);
-                var taker = new Fee(resultContainer.Value<Decimal>("takerfee"), CoinAmount.Zero);
-                return (maker, taker);
+                var maker = new Fee(resultContainer.Value<Decimal>("makerfee"), CurrencyAmount.Zero);
+                var taker = new Fee(resultContainer.Value<Decimal>("takerfee"), CurrencyAmount.Zero);
+                return (Maybe.Some(maker), Maybe.Some(taker));
             }
-            return (null, null);
+
+            return (Maybe<Fee>.None, Maybe<Fee>.None);
         }
-        public override async ValueTask<bool> ExecuteTrade(Trade trade, Price price, CoinAmount amount)
+        public override async ValueTask<bool> ExecuteTrade(Trade trade, Price price, CurrencyAmount amount)
         {
             return await this.ExecuteTrade(trade, price, amount, false);
         }
 
-        public async ValueTask<bool> ExecuteTrade(Trade trade, Price price, CoinAmount amount, bool postOnly)
+        public async ValueTask<bool> ExecuteTrade(Trade trade, Price price, CurrencyAmount amount, bool postOnly)
         {            
             var command = trade.Type == TradeType.Buy ? "buy" : "sell";
             var paramDictionary = new Dictionary<string, string>
@@ -97,38 +98,34 @@
             return true;
 
         }
-        
-        public override async ValueTask<CoinAmount?> GetBalance(CoinType coinType)
+
+        public override async ValueTask<Maybe<CurrencyAmount>> GetBalance(CurrencyType coinType)
         {
             var balances = await this.GetBalances();
-            
-            if (balances != null && balances.TryGetValue(coinType, out var result))
-            {
-                return result;
-            }
-
-            return null;
+            return balances.Case(
+                some: (dict) => dict.TryGetValue(coinType, out var result) ? Maybe.Some(result) : Maybe<CurrencyAmount>.None,
+                none: () => Maybe<CurrencyAmount>.None);
         }
 
-        public override async ValueTask<Dictionary<CoinType, CoinAmount>> GetBalances(bool ignoreCache = false)
+        public override async ValueTask<Maybe<Dictionary<CurrencyType, CurrencyAmount>>> GetBalances(bool ignoreCache = false)
         {
-            Func<ValueTask<Dictionary<CoinType, CoinAmount>>> getBalances = async () =>
+            Func<ValueTask<Maybe<Dictionary<CurrencyType, CurrencyAmount>>>> getBalances = async () =>
             {
                 var jsonResult = await this.SendCommand<Dictionary<string, decimal>>("returnBalances");
                 if (jsonResult != null)
                 {
-                    var result = new Dictionary<CoinType, CoinAmount>();
+                    var result = new Dictionary<CurrencyType, CurrencyAmount>();
                     foreach (var key in jsonResult.Keys)
                     {
-                        var coinType = CoinInfo.GetCoinType(key);
+                        var coinType = CryptoCurrency.GetCurrencyType(key);
                         if (!result.ContainsKey(coinType))
                         {
-                            result.Add(coinType, (CoinAmount)jsonResult[key]);
+                            result.Add(coinType, (CurrencyAmount)jsonResult[key]);
                         }
                     }
-                    return result;
+                    return Maybe<Dictionary<CurrencyType, CurrencyAmount>>.Some(result);
                 }
-                return null;
+                return Maybe<Dictionary<CurrencyType, CurrencyAmount>>.None;
             };
 
             if (ignoreCache)
@@ -136,18 +133,18 @@
                 var result = await getBalances();
             }
 
-            return await this.GetValue<Dictionary<CoinType, CoinAmount>>("Balances", async () =>
+            return await this.GetValue<Maybe<Dictionary<CurrencyType, CurrencyAmount>>>("Balances", async () =>
             {
                 return await getBalances();
             },
             secondsTilExpiration: 60);
         }
 
-        public override async ValueTask<string> Withdraw(PublicAddress address, CoinAmount amount)
+        public override async ValueTask<string> Withdraw(PublicAddress address, CurrencyAmount amount)
         {
             var paramDictionary = new Dictionary<string, string>
             {
-               {"currency", CoinInfo.GetDefaultAbbreviation(address.AddressType)},
+               {"currency", CryptoCurrency.GetDefaultAbbreviation(address.AddressType)},
                {"amount", amount.ToString()},
                {"address", address.ToString()}
             };
@@ -155,12 +152,12 @@
             return await this.SendCommand("withdraw", paramDictionary);
         }
 
-        public override async ValueTask<List<CompletedTrade>> GetTradeHistory(CoinType stockType, CoinType currencyType, int depth = 50)
+        public override async ValueTask<Maybe<List<CompletedTrade>>> GetTradeHistory(CurrencyType stockType, CurrencyType currencyType, int depth = 50)
         {
             var currencyPair = this.GetCurrencyPair(stockType, currencyType);
             var key = "TradeHistory:" + currencyPair;
 
-            return await this.GetValue<List<CompletedTrade>>(key, async () =>
+            return await this.GetValue< Maybe<List<CompletedTrade>>>(key, async () =>
             {
                 var paramDictionary = new Dictionary<string, string>
                 {
@@ -178,19 +175,20 @@
                         var type = trade.Value<string>("type").Equals("sell") ? TradeType.Sell : TradeType.Buy;
                         var date = trade.Value<DateTime>("date");
                         var rate = (Price)trade.Value<decimal>("rate");
-                        var amount = (CoinAmount)trade.Value<decimal>("amount");
+                        var amount = (CurrencyAmount)trade.Value<decimal>("amount");
                         result.Add(new CompletedTrade(type, stockType, currencyType, rate, amount, date));
                     }
+                    return Maybe.Some(result);
                 }
-                return result;
+                return Maybe<List<CompletedTrade>>.None;
             },
             secondsTilExpiration:20);
         }
-        public override async ValueTask<Dictionary<string, (List<(Price, CoinAmount)> asks, List<(Price, CoinAmount)> bids)>> GetOrderBooks(int depth = 50)
+        public override async ValueTask<Maybe<Dictionary<string, (List<(Price, CurrencyAmount)> asks, List<(Price, CurrencyAmount)> bids)>>> GetOrderBooks(int depth = 50)
         {
-            return await this.GetValue<Dictionary<string, (List<(Price, CoinAmount)> asks, List<(Price, CoinAmount)> bids)>>("orderbook", async () =>
+            return await this.GetValue<Maybe<Dictionary<string, (List<(Price, CurrencyAmount)> asks, List<(Price, CurrencyAmount)> bids)>>>("orderbook", async () =>
             {
-                var result = new Dictionary<string, (List<(Price, CoinAmount)> asks, List<(Price, CoinAmount)> bids)>(StringComparer.InvariantCultureIgnoreCase);
+                var result = new Dictionary<string, (List<(Price, CurrencyAmount)> asks, List<(Price, CurrencyAmount)> bids)>(StringComparer.InvariantCultureIgnoreCase);
                 var paramDictionary = new Dictionary<string, string>
                  {
                     {"currencyPair", "all" },
@@ -203,31 +201,31 @@
                     {
                         var pair = market.Key;
                         var data = ParseOrderBook(market.Value);
-                        if (data.Item1 != null && data.Item2 != null)
+                        if (data.Item1.HasValue() && data.Item2.HasValue())
                         {
-                            result.Add(pair,data);
+                            result.Add(pair,(data.Item1.Value(),data.Item2.Value()));
                         }
                     }
-                    return result;
+                    return Maybe.Some(result);
                 }
-                return null;
+                return Maybe<Dictionary<string, (List<(Price, CurrencyAmount)> asks, List<(Price, CurrencyAmount)> bids)>>.None;
             }
             );
         }
 
-        public override async ValueTask<(List<(Price, CoinAmount)> asks, List<(Price, CoinAmount)> bids)> GetOrderBook(CoinType stockType, CoinType currencyType, int depth = 50)
+        public override async ValueTask<(Maybe<List<(Price, CurrencyAmount)>> asks, Maybe<List<(Price, CurrencyAmount)>> bids)> GetOrderBook(CurrencyType stockType, CurrencyType currencyType, int depth = 50)
         {
             var currencyPair = this.GetCurrencyPair(stockType, currencyType);
             var key = "OrderBook:" + currencyPair;
-            return await this.GetValue<(List<(Price, CoinAmount)>, List<(Price, CoinAmount)>)>(key, async () =>
+            return await this.GetValue<(Maybe < List<(Price, CurrencyAmount)>>, Maybe < List<(Price, CurrencyAmount)>>)>(key, async () =>
             {
                 //try to grab the full order dictionary from the cache
-                var fullOrderDictionary = await this.GetValue<Dictionary<string, (List<(Price, CoinAmount)> asks, List<(Price, CoinAmount)> bids)>>
+                var fullOrderDictionary = await this.GetValue<Dictionary<string, (Maybe < List <(Price, CurrencyAmount)>> asks, Maybe < List <(Price, CurrencyAmount)>> bids)>>
                 ("orderbook", 
                 async () =>
                 {
                     //no op
-                    return await Task.FromResult<Dictionary<string, (List<(Price, CoinAmount)> asks, List<(Price, CoinAmount)> bids)>>(null);
+                    return await Task.FromResult<Dictionary<string, (Maybe < List <(Price, CurrencyAmount)>> asks, Maybe < List <(Price, CurrencyAmount)>> bids)>>(null);
                 });
 
                 if(fullOrderDictionary != null && fullOrderDictionary.TryGetValue(currencyPair, out var cachedResult))
@@ -242,7 +240,7 @@
                     {"depth", depth.ToString()}
                 };
 
-                (List<(Price, CoinAmount)>, List<(Price, CoinAmount)>) book = ((List<(Price, CoinAmount)>)null, (List<(Price, CoinAmount)>)null);
+                (Maybe<List<(Price, CurrencyAmount)>>, Maybe<List<(Price, CurrencyAmount)>>) book = (Maybe<List<(Price, CurrencyAmount)>>.None, Maybe<List<(Price, CurrencyAmount)>>.None);
 
                 var response = await this.SendCommand<JContainer>("returnOrderBook", paramDictionary);
 
@@ -254,11 +252,11 @@
             });
         }
 
-        public override async ValueTask<List<LoanOffer>> GetLoanOrderBook(CoinType currencyType, int depth = 50)
+        public override async ValueTask<Maybe<List<LoanOffer>>> GetLoanOrderBook(CurrencyType currencyType, int depth = 50)
         {
             var paramDictionary = new Dictionary<string, string>
             {
-                {"currency", $"{CoinInfo.GetDefaultAbbreviation(currencyType)}" },
+                {"currency", $"{Currency.GetDefaultAbbreviation(currencyType)}" },
                 {"limit", depth.ToString()}
             };
 
@@ -270,20 +268,21 @@
                 foreach (JToken offer in offers)
                 {
                     var rate = offer.Value<Decimal>("rate");
-                    var quantity = (CoinAmount)offer.Value<Decimal>("amount");
+                    var quantity = (CurrencyAmount)offer.Value<Decimal>("amount");
                     var minLength = new TimeSpan(offer.Value<int>("rangemin"), 0, 0, 0);
                     var maxLength = new TimeSpan(offer.Value<int>("rangemax"), 0, 0, 0);
                     result.Add(new LoanOffer(rate, quantity, minLength, maxLength));
                 }
-                return result;
+                return Maybe.Some(result);
             }
-            return null;
+            return Maybe<List<LoanOffer>>.None;
         }
-        private (List<(Price,CoinAmount)>, List<(Price, CoinAmount)>) ParseOrderBook(JContainer container)
+        private (Maybe<List<(Price, CurrencyAmount)>>, Maybe<List<(Price, CurrencyAmount)>>) ParseOrderBook(JContainer container)
         {
             if (container.Value<int>("isfrozen") == 0)
             {
-                var askList = new List<(Price, CoinAmount)>();
+                var askResult = Maybe<List<(Price, CurrencyAmount)>>.None;
+                var askList = new List<(Price, CurrencyAmount)>();
                 var asks = container["asks"];
 
                 foreach (var ask in asks)
@@ -296,9 +295,14 @@
                     {
                         coinDecimal = decimal.Parse(ask[1].ToString(), System.Globalization.NumberStyles.Float);
                     }
-                    askList.Add(((Price)priceDecimal, (CoinAmount)coinDecimal));
+                    askList.Add(((Price)priceDecimal, (CurrencyAmount)coinDecimal));
                 }
-                var bidList = new List<(Price, CoinAmount)>();
+                if(askList.Count>0)
+                {
+                    askResult = Maybe.Some(askList);
+                }
+                var bidResult = Maybe<List<(Price, CurrencyAmount)>>.None;
+                var bidList = new List<(Price, CurrencyAmount)>();
                 var bids = container["bids"];
                 foreach (var bid in bids)
                 {
@@ -310,34 +314,38 @@
                     {
                         coinDecimal = decimal.Parse(bid[1].ToString(), System.Globalization.NumberStyles.Float);
                     }
-                    bidList.Add(((Price)priceDecimal, (CoinAmount)coinDecimal));
+                    bidList.Add(((Price)priceDecimal, (CurrencyAmount)coinDecimal));
                 }
-                return (askList, bidList);
+                if (bidList.Count > 0)
+                {
+                    bidResult = Maybe.Some(bidList);
+                }
+                return (askResult, bidResult);
             }
-            return (null, null);
+            return (Maybe<List<(Price, CurrencyAmount)>>.None, Maybe<List<(Price, CurrencyAmount)>>.None);
         }
 
-        public override async ValueTask<(Dictionary<CoinType, ICollection<CoinType>> buyMarkets, Dictionary<CoinType, ICollection<CoinType>> sellMarkets)> GetMarkets()
+        public override async ValueTask<(Dictionary<CurrencyType, ICollection<CurrencyType>> buyMarkets, Dictionary<CurrencyType, ICollection<CurrencyType>> sellMarkets)> GetMarkets()
         {
             var resultContainer = await this.SendCommand<JContainer>("return24hVolume");
             if (resultContainer != null)
             {
-                var buyMarkets = new Dictionary<CoinType, ICollection<CoinType>>();
-                var sellMarkets = new Dictionary<CoinType, ICollection<CoinType>>();
+                var buyMarkets = new Dictionary<CurrencyType, ICollection<CurrencyType>>();
+                var sellMarkets = new Dictionary<CurrencyType, ICollection<CurrencyType>>();
                 foreach (JToken currencyPair in resultContainer)
                 {
                     var pair = currencyPair.Path.Split('_');
                     if (pair.Length == 2)
                     {
-                        var currency = CoinInfo.GetCoinType(pair[0]);
-                        var stock = CoinInfo.GetCoinType(pair[1]);
+                        var currency = Currency.GetCurrencyType(pair[0]);
+                        var stock = Currency.GetCurrencyType(pair[1]);
                         if (sellMarkets.ContainsKey(stock))
                         {
                             sellMarkets[stock].Add(currency);
                         }
                         else
                         {
-                            sellMarkets.Add(stock, new HashSet<CoinType>() { currency });
+                            sellMarkets.Add(stock, new HashSet<CurrencyType>() { currency });
                         }
 
                         if (buyMarkets.ContainsKey(currency))
@@ -346,7 +354,7 @@
                         }
                         else
                         {
-                            buyMarkets.Add(currency, new HashSet<CoinType>() { stock });
+                            buyMarkets.Add(currency, new HashSet<CurrencyType>() { stock });
                         }
                     }
                 }
@@ -355,94 +363,82 @@
             return (null,null);
         }
 
-        public override async ValueTask<Dictionary<CoinType, ICollection<CoinType>>> GetBuyMarkets()
+        public override async ValueTask<Maybe<Dictionary<CurrencyType, ICollection<CurrencyType>>>> GetBuyMarkets()
         {
             var resultContainer = await this.SendCommand<JContainer>("return24hVolume");
             if (resultContainer != null)
             {
-                var result = new Dictionary<CoinType, ICollection<CoinType>>();
+                var result = new Dictionary<CurrencyType, ICollection<CurrencyType>>();
                 foreach (JToken currencyPair in resultContainer)
                 {
                     var pair = currencyPair.Path.Split('_');
                     if (pair.Length == 2)
                     {
-                        var currency = CoinInfo.GetCoinType(pair[0]);
-                        var stock = CoinInfo.GetCoinType(pair[1]);
+                        var currency = CryptoCurrency.GetCurrencyType(pair[0]);
+                        var stock = CryptoCurrency.GetCurrencyType(pair[1]);
                         if (result.ContainsKey(stock))
                         {
                             result[stock].Add(currency);
                         }
                         else
                         {
-                            result.Add(stock, new HashSet<CoinType>() { currency });
+                            result.Add(stock, new HashSet<CurrencyType>() { currency });
                         }
                     }
                 }
-                return result;
+                return Maybe.Some(result);
             }
-            return null;
+            return Maybe<Dictionary<CurrencyType, ICollection<CurrencyType>>>.None;
         }
 
-        public override async ValueTask<Dictionary<CoinType, ICollection<CoinType>>> GetSellMarkets()
+        public override async ValueTask<Maybe<Dictionary<CurrencyType, ICollection<CurrencyType>>>> GetSellMarkets()
         {
             var resultContainer = await this.SendCommand<JContainer>("return24hVolume");
             if (resultContainer != null)
             {
-                var result = new Dictionary<CoinType, ICollection<CoinType>>();
+                var result = new Dictionary<CurrencyType, ICollection<CurrencyType>>();
                 foreach (JToken currencyPair in resultContainer)
                 {
                     var pair = currencyPair.Path.Split('_');
                     if (pair.Length == 2)
                     {
-                        var currency = CoinInfo.GetCoinType(pair[0]);
-                        var stock = CoinInfo.GetCoinType(pair[1]);
+                        var currency = CryptoCurrency.GetCurrencyType(pair[0]);
+                        var stock = CryptoCurrency.GetCurrencyType(pair[1]);
                         if (result.ContainsKey(currency))
                         {
                             result[currency].Add(stock);
                         }
                         else
                         {
-                            result.Add(currency, new HashSet<CoinType>() { stock });
+                            result.Add(currency, new HashSet<CurrencyType>() { stock });
                         }
                     }
                 }
-                return result;
+                return Maybe.Some(result);
             }
-            return null;
+            return Maybe<Dictionary<CurrencyType, ICollection<CurrencyType>>>.None;
         }
-        private string GetCurrencyPair(CoinType stockType, CoinType currencyType)
+        private string GetCurrencyPair(CurrencyType stockType, CurrencyType currencyType)
         {
             return $"{GetCurrencyAbbreviation(currencyType)}_{GetCurrencyAbbreviation(stockType)}";
         }
-        private static string GetCurrencyAbbreviation(CoinType coinType)
+        private static string GetCurrencyAbbreviation(CurrencyType coinType)
         {
             switch (coinType)
             {
-                case CoinType.None:
-                case CoinType.Bitcoin:
-                case CoinType.Dash:
-                case CoinType.DigiByte:
-                case CoinType.Ethereum:
-                case CoinType.EthereumClassic:
-                case CoinType.Factom:
-                case CoinType.Litecoin:
-                case CoinType.Monero:
-                case CoinType.Ripple:
-                case CoinType.Stellar:
-                case CoinType.USDTether:
-                case CoinType.Vericoin:
-                case CoinType.Verium:
-                case CoinType.ZCash:
+                case CurrencyType.None:
                     {
-                        return CoinInfo.GetDefaultAbbreviation(coinType);
+                        return "";
                     }
-                case CoinType.BitcoinCash:
+                case CurrencyType.BitcoinCash:
                     {
-                        return CoinInfo.GetCoinInfo(coinType).GetAbbreviations()[1];
+                        return CryptoCurrency.GetCryptoCurrency(coinType).GetAbbreviations()[1];
                     }
-            }
-        
-            return "";
+                default:
+                    {
+                        return CryptoCurrency.GetDefaultAbbreviation(coinType);
+                    }
+            }        
         }
         
         private async ValueTask<T> SendCommand<T>(string method, Dictionary<string, string> paramDictionary = null) where T : class

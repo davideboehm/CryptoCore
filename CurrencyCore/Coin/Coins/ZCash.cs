@@ -3,7 +3,7 @@
     using System;
     using System.Collections.Generic;
 
-    internal class ZCash : CoinInfo
+    internal class ZCash : CryptoCurrency
     {
         public override List<string> GetAbbreviations()
         {

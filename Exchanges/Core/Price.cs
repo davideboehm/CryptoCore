@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Core.Functional;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -10,6 +11,21 @@ namespace ExchangesCore
     {
         public static Price Zero = (Price)decimal.Zero;
         private decimal value;
+
+        public static implicit operator Maybe<Price>(Price value)
+        {
+            return Maybe.Some(value);
+        }
+        
+        public static implicit operator MaybeDecimal(Price value)
+        {
+            return MaybeDecimal.Some(value.value);
+        }
+
+        public static implicit operator MaybeDouble(Price value)
+        {
+            return MaybeDouble.Some((double)value.value);
+        }
 
         public override bool Equals(object obj)
         {

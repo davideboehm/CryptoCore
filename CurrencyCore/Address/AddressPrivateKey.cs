@@ -8,17 +8,17 @@
     public class AddressPrivateKey
     {
         public HashWithoutChecksum Value;
-        public readonly CoinType AddressType;
+        public readonly CurrencyType AddressType;
         public bool IsCompressed;
 
-        public AddressPrivateKey(HashWithoutChecksum value, CoinType addressType, bool isCompressed)
+        public AddressPrivateKey(HashWithoutChecksum value, CurrencyType addressType, bool isCompressed)
         {
             this.Value = value;
             this.AddressType = addressType;
             this.IsCompressed = isCompressed;
         }
 
-        public AddressPrivateKey(WifString wifString, CoinType addressType)
+        public AddressPrivateKey(WifString wifString, CurrencyType addressType)
             : this(wifString.ValueWithoutIdentifierOrChecksum, addressType,wifString.IsCompressed)
         {
             this.wifString = wifString.ToString();
@@ -74,7 +74,7 @@
                 Array.Copy(ripemd160Hash, 0, ripemd160HashWithVersionByte, 1, ripemd160Hash.Length);
 
 
-                ripemd160HashWithVersionByte[0] = CoinInfo.GetCoinInfo(this.AddressType).GetAddressSignifier();
+                ripemd160HashWithVersionByte[0] = CryptoCurrency.GetCryptoCurrency(this.AddressType).GetAddressSignifier();
 
                 var finishedHashWithoutChecksum = new HashWithoutChecksum(ripemd160HashWithVersionByte);
                 var finishedHashWithChecksum = new HashWithChecksum(finishedHashWithoutChecksum);

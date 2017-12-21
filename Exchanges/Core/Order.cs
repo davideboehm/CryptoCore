@@ -14,11 +14,11 @@
                 
         public Order(
             OrderType type,
-            CoinType coinType,
-            CoinType currencyType,
+            CurrencyType coinType,
+            CurrencyType currencyType,
             Price price,
-            CoinAmount quantity,
-            CoinAmount total)
+            CurrencyAmount quantity,
+            CurrencyAmount total)
             : this()
         {
             this.StockType = coinType;
@@ -29,12 +29,12 @@
             this.Price = price;
         }
 
-        public CoinType CurrencyType { get; private set; }
-        public CoinType StockType { get; private set; }
+        public CurrencyType CurrencyType { get; private set; }
+        public CurrencyType StockType { get; private set; }
         public OrderType Type { get; private set; }
         public Price Price { get; private set; }
-        public CoinAmount Quantity { get; private set; }
-        public CoinAmount Total { get; private set; }
+        public CurrencyAmount Quantity { get; private set; }
+        public CurrencyAmount Total { get; private set; }
 
         public Order Clone()
         {
@@ -50,10 +50,10 @@
         public override string ToString()
         {
             var result = Enum.GetName(typeof(OrderType), this.Type) + " " + this.Quantity + " "
-                         + Enum.GetName(typeof(CoinType), this.StockType) + " coins for "
-                         + Enum.GetName(typeof(CoinType), this.CurrencyType) + " at "
-                         + this.Price + " " + Enum.GetName(typeof(CoinType), this.StockType)
-                         + "s per " + Enum.GetName(typeof(CoinType), this.CurrencyType) + ".";
+                         + Enum.GetName(typeof(CurrencyType), this.StockType) + " coins for "
+                         + Enum.GetName(typeof(CurrencyType), this.CurrencyType) + " at "
+                         + this.Price + " " + Enum.GetName(typeof(CurrencyType), this.StockType)
+                         + "s per " + Enum.GetName(typeof(CurrencyType), this.CurrencyType) + ".";
             return result;
         }
         

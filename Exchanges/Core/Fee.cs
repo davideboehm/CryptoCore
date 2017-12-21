@@ -7,9 +7,9 @@ namespace ExchangesCore
     public struct Fee
     {
         public readonly decimal Percent;
-        public readonly CoinAmount Flat;
+        public readonly CurrencyAmount Flat;
         
-        public Fee(Decimal percentageFee, CoinAmount flatFee)
+        public Fee(Decimal percentageFee, CurrencyAmount flatFee)
         {
             this.Percent = percentageFee;
             this.Flat = flatFee;

@@ -25,7 +25,7 @@ namespace CurrencyCore.Address
             }
         }
 
-        public FullAddress(CoinType coinType, bool forcePublicKeyGeneration = false)
+        public FullAddress(CurrencyType coinType, bool forcePublicKeyGeneration = false)
         {
             AddressPrivateKey privateKey = new AddressPrivateKey(new HashWithoutChecksum(RandomGeneratorUtil.GetByteArray(32)), coinType, true);
             this.Initialize(privateKey, null, forcePublicKeyGeneration);

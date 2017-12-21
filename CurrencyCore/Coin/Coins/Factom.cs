@@ -3,7 +3,7 @@
     using System;
     using System.Collections.Generic;
 
-    internal class Factom : CoinInfo
+    internal class Factom : CryptoCurrency
     {
         public override List<string> GetAbbreviations()
         {

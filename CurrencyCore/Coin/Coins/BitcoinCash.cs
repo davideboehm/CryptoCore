@@ -3,7 +3,7 @@
     using System;
     using System.Collections.Generic;
 
-    public class BitcoinCash : CoinInfo
+    public class BitcoinCash : CryptoCurrency
     {
         public override List<string> GetAbbreviations()
         {

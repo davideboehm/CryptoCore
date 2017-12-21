@@ -10,12 +10,12 @@ namespace ExchangesCore
     public struct Trade
     {
         public readonly TradeType Type;
-        public readonly CoinType StockCoin;
-        public readonly CoinType CurrencyCoin;
+        public readonly CurrencyType StockCoin;
+        public readonly CurrencyType CurrencyCoin;
 
         public Trade(TradeType type,
-        CoinType stockCoin,
-        CoinType currencyCoin)
+        CurrencyType stockCoin,
+        CurrencyType currencyCoin)
         {
             this.Type = type;
             this.StockCoin = stockCoin;

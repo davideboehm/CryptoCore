@@ -59,7 +59,7 @@
             return bool.Parse(rest["isvalid"]);
         }
 
-        public override void SendToAddress(PublicAddress destinationAddress, CoinAmount amount)
+        public override void SendToAddress(PublicAddress destinationAddress, CurrencyAmount amount)
         {
             if (amount > 0)
             {
@@ -67,14 +67,14 @@
             }
         }
 
-        public override void SendFrom(AddressAlias from, PublicAddress destinationAddress, CoinAmount amount)
+        public override void SendFrom(AddressAlias from, PublicAddress destinationAddress, CurrencyAmount amount)
         {
             if (amount > 0)
             {
                 this.SendCommand("sendfrom", amount, from.ToString(), destinationAddress.ToString());
             }
         }
-        public override void SendMany(AddressAlias from, List<(PublicAddress, CoinAmount)> sendTuples)
+        public override void SendMany(AddressAlias from, List<(PublicAddress, CurrencyAmount)> sendTuples)
         {
         }
 
@@ -93,16 +93,16 @@
             return last != null ? int.Parse(last["blocktime"].ToString()) : 0;
         }
 
-        public override CoinAmount GetAliasBalanceStartingFromTime(AddressAlias alias, long earliestTimeThatCounts)
+        public override CurrencyAmount GetAliasBalanceStartingFromTime(AddressAlias alias, long earliestTimeThatCounts)
         {
             var transactions = this.ListTransactions(alias, 30);
 
             return transactions != null
-                ? (CoinAmount)transactions.Where(
+                ? (CurrencyAmount)transactions.Where(
                     transaction => transaction.TransactionCategory == TransactionCategory.Receive &&
                                    transaction.BlockTime > earliestTimeThatCounts)
                     .Sum(transaction => transaction.Amount)
-                : (CoinAmount)0;
+                : (CurrencyAmount)0;
         }
 
         public override List<PublicAddress> GetAddress(AddressAlias alias)
@@ -123,11 +123,11 @@
             return bool.Parse(rest["ismine"]);
         }
 
-        public override CoinAmount GetBalance(AddressAlias alias)
+        public override CurrencyAmount GetBalance(AddressAlias alias)
         {
             var result = this.SendCommand("getbalance", alias.ToString());
             var dictionary = JsonConvert.DeserializeObject<Dictionary<string, string>>(result);
-            return (CoinAmount)decimal.Parse(dictionary["result"]);
+            return (CurrencyAmount)decimal.Parse(dictionary["result"]);
         }
 
         public override List<TransactionRecord> ListTransactions(AddressAlias alias, int count = 10, int skip = 0)
@@ -142,10 +142,10 @@
 
         private string SendCommand(string method, params string[] paramaters)
         {
-            return this.SendCommand(method, CoinAmount.Zero, paramaters);
+            return this.SendCommand(method, CurrencyAmount.Zero, paramaters);
         }
 
-        private string SendCommand(string method, CoinAmount amount, params string[] paramaters)
+        private string SendCommand(string method, CurrencyAmount amount, params string[] paramaters)
         {
             var webRequest = (HttpWebRequest)WebRequest.Create(this.Uri);
             webRequest.Credentials = this.NetCredentials;

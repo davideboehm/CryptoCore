@@ -3,7 +3,7 @@
     using System;
     using System.Collections.Generic;
 
-    internal class Vericoin : CoinInfo
+    internal class Vericoin : CryptoCurrency
     {
         public override List<string> GetAbbreviations()
         {

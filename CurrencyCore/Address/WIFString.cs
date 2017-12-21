@@ -11,7 +11,7 @@
         private string wifStringCache = null;
         public bool IsCompressed;
 
-        public WifString(HashWithChecksum value, CoinType addressType)
+        public WifString(HashWithChecksum value, CurrencyType addressType)
         {
             this.Value = value;
 
@@ -27,19 +27,19 @@
             this.ValueWithoutIdentifierOrChecksum = new HashWithoutChecksum(tempArray);
         }
 
-        public WifString(HashWithoutChecksum value, CoinType addressType)
+        public WifString(HashWithoutChecksum value, CurrencyType addressType)
         {
             this.ValueWithoutIdentifierOrChecksum = value;
 
             byte[] rv = new byte[value.GetBytesWithoutChecksum().Length + 2];
             Array.Copy(value.GetBytesWithoutChecksum(), 0, rv, 1, value.GetBytesWithoutChecksum().Length);
-            rv[0] = CoinInfo.GetCoinInfo(addressType).GetWifCompressedSignifier();
+            rv[0] = CryptoCurrency.GetCryptoCurrency(addressType).GetWifCompressedSignifier();
             rv[rv.Length - 1] = 0x01;
 
             this.Value = new HashWithChecksum(new HashWithoutChecksum(rv));
         }
 
-        public WifString(string value, CoinType addressType):this(Base58.CreateBase58FromStringWithChecksum(value).Hash, addressType)
+        public WifString(string value, CurrencyType addressType):this(Base58.CreateBase58FromStringWithChecksum(value).Hash, addressType)
         {
             wifStringCache = value;
         }

@@ -9,7 +9,7 @@ namespace ExchangesCore
 {
     public struct LoanOffer
     {
-        public LoanOffer(Decimal rate, CoinAmount quantity, TimeSpan minLength, TimeSpan maxLength)
+        public LoanOffer(Decimal rate, CurrencyAmount quantity, TimeSpan minLength, TimeSpan maxLength)
         {
             this.Rate = rate;
             this.Quantity = quantity;
@@ -18,7 +18,7 @@ namespace ExchangesCore
         }
 
         public Decimal Rate { get; private set;}
-        public CoinAmount Quantity { get; private set; }
+        public CurrencyAmount Quantity { get; private set; }
 
         public TimeSpan MinLength { get; private set; }
         public TimeSpan MaxLength { get; private set; }

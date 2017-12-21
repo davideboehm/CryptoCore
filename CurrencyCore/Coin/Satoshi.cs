@@ -9,14 +9,14 @@
         private const decimal TenToTheEighth = 100000000M;
         private long value;
 
-        public static explicit operator Satoshi(CoinAmount amount)
+        public static explicit operator Satoshi(CurrencyAmount amount)
         {
             return new Satoshi { value = (long)(amount * TenToTheEighth) };
         }
 
-        public static explicit operator CoinAmount(Satoshi amount)
+        public static explicit operator CurrencyAmount(Satoshi amount)
         {
-            return (CoinAmount)(amount.value * TenToTheNegativeEighth);
+            return (CurrencyAmount)(amount.value * TenToTheNegativeEighth);
         }
 
         public override string ToString()

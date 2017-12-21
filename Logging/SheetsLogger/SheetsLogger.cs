@@ -44,7 +44,7 @@ namespace Logging
             {
                 new List<object>() { message.Timestamp.ToShortTimeString(), message.MessageType.ToString(), message.Text }
             };
-            var request = service.Spreadsheets.Values.Append(new ValueRange() { Values = values }, Settings.GoogleAPI.Default.SpreadsheetId, "A1:B2");
+            var request = service.Spreadsheets.Values.Append(new ValueRange() { Values = values }, Settings.GoogleAPI.Default.LoggerSpreadsheetId, "A1:B2");
             request.InsertDataOption = SpreadsheetsResource.ValuesResource.AppendRequest.InsertDataOptionEnum.INSERTROWS;
             request.ValueInputOption = SpreadsheetsResource.ValuesResource.AppendRequest.ValueInputOptionEnum.RAW;
             var response = request.Execute();

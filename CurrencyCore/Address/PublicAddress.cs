@@ -6,7 +6,7 @@
 
     public class PublicAddress
     {
-        public CoinType AddressType;
+        public CurrencyType AddressType;
         public readonly bool IsHex;
         protected Lazy<AddressPublicKey> LazyPublicKey;
 
@@ -14,12 +14,12 @@
         {
         }
 
-        public PublicAddress(AddressPublicKey key, CoinType addressType)
+        public PublicAddress(AddressPublicKey key, CurrencyType addressType)
         {
             this.LazyPublicKey = new Lazy<AddressPublicKey>(() => key);
             this.AddressType = addressType;
         }
-        public PublicAddress(String key, CoinType addressType)
+        public PublicAddress(String key, CurrencyType addressType)
         {
             this.IsHex = (key.StartsWith("0x") || key.StartsWith("0X"));
             this.LazyPublicKey = new Lazy<AddressPublicKey>(() =>

@@ -15,7 +15,7 @@
         public AddressAlias Alias;
         public PublicAddress Address;
         public TransactionCategory TransactionCategory;
-        public CoinAmount Amount;
+        public CurrencyAmount Amount;
         public int Confirmations;
         public bool IsGenerated;
         public string BlockHash;

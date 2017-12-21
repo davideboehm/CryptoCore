@@ -1,43 +1,57 @@
 ﻿namespace CurrencyCore.Coin
 {
+    using Core.Functional;
     using System;
     /// <summary>
     /// Used to store coin quantities. 
     /// ** WARNING** Only holds 8 decimal places since most coins have a limit of 8
     /// </summary>
-    public struct CoinAmount
+    public struct CurrencyAmount
     {
-        public static CoinAmount Zero = (CoinAmount)decimal.Zero;
+        public static CurrencyAmount Zero = (CurrencyAmount)decimal.Zero;
         private decimal value;
 
-        public static implicit operator CoinAmount(decimal amount)
+        public static Maybe<CurrencyAmount> operator *(CurrencyAmount value1, Maybe<CurrencyAmount> value2)
         {
-            return new CoinAmount { value = Math.Round(amount, 8) };
+            return value2.Case(
+                some: (someData) => Maybe.Some(value1 * someData),
+                none: () => Maybe<CurrencyAmount>.None);
+        }
+        public static Maybe<CurrencyAmount> operator *(Maybe<CurrencyAmount> value1, CurrencyAmount value2)
+        {
+            return value1.Case(
+                some: (someData) => Maybe.Some(value2 * someData),
+                none: () => Maybe<CurrencyAmount>.None);
         }
 
-        public static implicit operator decimal(CoinAmount amount)
+        public static implicit operator CurrencyAmount(decimal amount)
+        {
+            return new CurrencyAmount { value = Math.Round(amount, 8) };
+        }
+
+        public static implicit operator decimal(CurrencyAmount amount)
         {
             return amount.value;
         }
 
-        public static CoinAmount operator +(CoinAmount c1, CoinAmount c2)
+        public static CurrencyAmount operator +(CurrencyAmount c1, CurrencyAmount c2)
         {
-            return (CoinAmount)(c1.value + c2.value);
+            return (CurrencyAmount)(c1.value + c2.value);
         }
 
-        public static CoinAmount operator -(CoinAmount c1, CoinAmount c2)
+        public static CurrencyAmount operator -(CurrencyAmount c1, CurrencyAmount c2)
         {
-            return (CoinAmount)(c1.value - c2.value);
+            return (CurrencyAmount)(c1.value - c2.value);
         }
 
-        public static CoinAmount operator *(CoinAmount c1, CoinAmount c2)
+        public static CurrencyAmount operator *(CurrencyAmount c1, CurrencyAmount c2)
         {
-            return (CoinAmount)(c1.value * c2.value);
+            return (CurrencyAmount)(c1.value * c2.value);
         }
 
-        public static CoinAmount operator /(CoinAmount c1, CoinAmount c2)
+        public static CurrencyAmount operator /(CurrencyAmount c1, CurrencyAmount c2)
         {
-            return (CoinAmount)(c1.value / c2.value);
+            return (CurrencyAmount)(c1.value / c2.value);
         }
 
         public override string ToString()

@@ -9,18 +9,18 @@ namespace ExchangesCore
     public struct CompletedTrade
     {
         public readonly TradeType Type;
-        public readonly CoinType StockCoin;
-        public readonly CoinType CurrencyCoin;
+        public readonly CurrencyType StockCoin;
+        public readonly CurrencyType CurrencyCoin;
         public readonly DateTime DateCompleted;
-        public readonly CoinAmount Amount;
+        public readonly CurrencyAmount Amount;
         public readonly Price Price;
 
         public CompletedTrade(
         TradeType type,
-        CoinType stockCoin,
-        CoinType currencyCoin,
+        CurrencyType stockCoin,
+        CurrencyType currencyCoin,
         Price price,
-        CoinAmount amount,
+        CurrencyAmount amount,
         DateTime dateCompleted)
         {
             this.Type = type;
@@ -33,8 +33,8 @@ namespace ExchangesCore
         public override string ToString()
         {
             var verb = this.Type == TradeType.Buy ? "Bought" : "Sold";
-            var stockAbbreviation = CoinInfo.GetCoinInfo(this.StockCoin).GetAbbreviations()[0];
-            var currencyAbbreviation = CoinInfo.GetCoinInfo(this.CurrencyCoin).GetAbbreviations()[0];
+            var stockAbbreviation = Currency.GetDefaultAbbreviation(this.StockCoin);
+            var currencyAbbreviation = Currency.GetDefaultAbbreviation(this.CurrencyCoin);
 
             return $"{verb} {Amount} {stockAbbreviation} for {this.Price} {currencyAbbreviation} per {stockAbbreviation} on {this.DateCompleted}";
         }

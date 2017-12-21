@@ -6,6 +6,7 @@ using CurrencyCore.Address;
 using CurrencyCore.Coin;
 using System.Runtime.Caching;
 using System.Threading;
+using Core.Functional;
 
 namespace ExchangesCore
 {
@@ -14,25 +15,25 @@ namespace ExchangesCore
         private MemoryCache dataCache;
         private Dictionary<string, AutoResetEvent> dataCacheLocks = new Dictionary<string, AutoResetEvent>();
 
-        public abstract ValueTask<bool> ExecuteTrade(Trade trade, Price price, CoinAmount amount);
-        public abstract ValueTask<CoinAmount?> GetBalance(CoinType coinType);
-        public abstract ValueTask<Dictionary<CoinType, CoinAmount>> GetBalances(bool ignoreCache = false);
-        public abstract ValueTask<Dictionary<CoinType, ICollection<CoinType>>> GetBuyMarkets();
-        public abstract ValueTask<(Fee? maker, Fee? taker)> GetCurrentTradeFees();
-        public abstract ValueTask<List<LoanOffer>> GetLoanOrderBook(CoinType currencyType, int depth = 50);
-        public abstract ValueTask<(Dictionary<CoinType, ICollection<CoinType>> buyMarkets, Dictionary<CoinType, ICollection<CoinType>> sellMarkets)> GetMarkets();
-        public abstract ValueTask<(List<(Price, CoinAmount)> asks, List<(Price, CoinAmount)> bids)> GetOrderBook(CoinType stockType, CoinType currencyType, int depth = 50);
-        public abstract ValueTask<Dictionary<string, (List<(Price, CoinAmount)> asks, List<(Price, CoinAmount)> bids)>> GetOrderBooks(int depth = 50);
-        public abstract ValueTask<Dictionary<CoinType, ICollection<CoinType>>> GetSellMarkets();
-        public abstract ValueTask<List<CompletedTrade>> GetTradeHistory(CoinType stockType, CoinType currencyType, int depth = 50);
-        public abstract ValueTask<string> Withdraw(PublicAddress address, CoinAmount amount);
+        public abstract ValueTask<bool> ExecuteTrade(Trade trade, Price price, CurrencyAmount amount);
+        public abstract ValueTask<Maybe<CurrencyAmount>> GetBalance(CurrencyType coinType);
+        public abstract ValueTask<Maybe<Dictionary<CurrencyType, CurrencyAmount>>> GetBalances(bool ignoreCache = false);
+        public abstract ValueTask<Maybe<Dictionary<CurrencyType, ICollection<CurrencyType>>>> GetBuyMarkets();
+        public abstract ValueTask<(Maybe<Fee> maker, Maybe<Fee> taker)> GetCurrentTradeFees();
+        public abstract ValueTask<Maybe<List<LoanOffer>>> GetLoanOrderBook(CurrencyType currencyType, int depth = 50);
+        public abstract ValueTask<(Dictionary<CurrencyType, ICollection<CurrencyType>> buyMarkets, Dictionary<CurrencyType, ICollection<CurrencyType>> sellMarkets)> GetMarkets();
+        public abstract ValueTask<(Maybe<List<(Price, CurrencyAmount)>> asks, Maybe<List<(Price, CurrencyAmount)>> bids)> GetOrderBook(CurrencyType stockType, CurrencyType currencyType, int depth = 50);
+        public abstract ValueTask<Maybe<Dictionary<string, (List<(Price, CurrencyAmount)> asks, List<(Price, CurrencyAmount)> bids)>>> GetOrderBooks(int depth = 50);
+        public abstract ValueTask<Maybe<Dictionary<CurrencyType, ICollection<CurrencyType>>>> GetSellMarkets();
+        public abstract ValueTask<Maybe<List<CompletedTrade>>> GetTradeHistory(CurrencyType stockType, CurrencyType currencyType, int depth = 50);
+        public abstract ValueTask<string> Withdraw(PublicAddress address, CurrencyAmount amount);
 
         protected ExchangeBase(string className)
         {
             this.dataCache = new MemoryCache(className + Thread.CurrentThread.ManagedThreadId);
         }
 
-        public virtual async ValueTask<(PriceRange? sellPrice, PriceRange? buyPrice)> GetEstimatedExchangeRates(CoinType stockCoin, CoinType currencyCoin)
+        public virtual async ValueTask<(Maybe<PriceRange> sellPrice, Maybe<PriceRange> buyPrice)> GetEstimatedExchangeRates(CurrencyType stockCoin, CurrencyType currencyCoin)
         {
             var history = await this.GetTradeHistory(stockCoin, currencyCoin);
 
@@ -40,60 +41,74 @@ namespace ExchangesCore
             return this.GetEstimatedExchangeRate(history, bids, asks);
         }
 
-        protected (PriceRange?, PriceRange?) GetEstimatedExchangeRate(List<CompletedTrade> history, List<(Price, CoinAmount)> bids, List<(Price, CoinAmount)> asks)
+        protected (Maybe<PriceRange>, Maybe<PriceRange>) GetEstimatedExchangeRate(Maybe<List<CompletedTrade>> history, Maybe<List<(Price, CurrencyAmount)>> bids, Maybe<List<(Price, CurrencyAmount)>> asks)
         {
+            var noneResult = (Maybe<PriceRange>.None, Maybe<PriceRange>.None);
             try
             {
-                if (history != null && history.Count > 0 && bids != null && asks != null)
-                {
+                return history.Case(
+                     some: (historyData) =>
+                     {
+                         if (historyData.Count > 0)
+                         {
+                             var firstDeriv = new List<Price>();
+                             var averageTradeAmount = historyData.Average((trade) => trade.Amount);
+                             var start = historyData.Last().DateCompleted;
+                             var end = historyData.First().DateCompleted;
+                             var timeWeight = Math.Max((end - start).TotalSeconds / historyData.Count, 1);
+                             var totalWeight = 0M;
+                             var weightedTotalPrice = 0M;
+                             for (int i = 0; i < historyData.Count && i < 40; i++)
+                             {
+                                 var weight = historyData[i].Amount * (decimal)((historyData[i].DateCompleted - start).TotalSeconds / timeWeight);
+                                 totalWeight += weight;
+                                 weightedTotalPrice += historyData[i].Price * weight;
+                             }
+                             if (totalWeight > 0)
+                             {
+                                 var averagePrice = (double)(weightedTotalPrice / totalWeight);
+                                 var variance = historyData.Take(40).Average(historyItem => ((double)(historyItem.Price - averagePrice) * (double)(historyItem.Price - averagePrice)));
+                                 Price stdDeviation = Math.Sqrt(variance);
 
-                    var firstDeriv = new List<Price>();
-                    var averageTradeAmount = history.Average((trade) => trade.Amount);
-                    var start = history.Last().DateCompleted;
-                    var end = history.First().DateCompleted;
-                    var timeWeight = Math.Max((end - start).TotalSeconds / history.Count, 1);
-                    var totalWeight = 0M;
-                    var weightedTotalPrice = 0M;
-                    for (int i = 0; i < history.Count && i < 40; i++)
-                    {
-                        var weight = history[i].Amount * (decimal)((history[i].DateCompleted - start).TotalSeconds / timeWeight);
-                        totalWeight += weight;
-                        weightedTotalPrice += history[i].Price * weight;
-                    }
-                    if (totalWeight > 0)
-                    {
-                        var averagePrice = (double)(weightedTotalPrice / totalWeight);
-                        var variance = history.Take(40).Average(historyItem => ((double)(historyItem.Price - averagePrice) * (double)(historyItem.Price - averagePrice)));
-                        Price stdDeviation = Math.Sqrt(variance);
+                                 var averageBid = this.GetWeightedAverage(bids, 15, averageTradeAmount * 5);
 
-                        var averageBid = this.GetWeightedAverage(bids, 15, averageTradeAmount * 5);
+                                 var averageAsk = this.GetWeightedAverage(asks, 15, averageTradeAmount * 5);
 
-                        var averageAsk = this.GetWeightedAverage(asks, 15, averageTradeAmount * 5);
+                                 if (averageBid.HasValue() && averageAsk.HasValue())
+                                 {
+                                     var buyMedian = .10 * averagePrice + .90 * (.10M * averageBid.Value() + .90M * averageAsk.Value());
+                                     var sellMedian = .10 * averagePrice + .90 * (.10M * averageAsk.Value() + .90M * averageBid.Value());
+                                     return (Maybe.Some(new PriceRange(sellMedian, stdDeviation)),
+                                         Maybe.Some(new PriceRange(buyMedian, stdDeviation)));
+                                 }
+                             }
+                         }
 
-                        var buyMedian = .10 * averagePrice + .90 * (.10 * averageBid + .90 * averageAsk);
-                        var sellMedian = .10 * averagePrice + .90 * (.10 * averageAsk + .90 * averageBid);
-                        return (new PriceRange(sellMedian, stdDeviation),
-                                new PriceRange(buyMedian, stdDeviation));
-                    }
-                }
+                         return (Maybe<PriceRange>.None, Maybe<PriceRange>.None);
+                     },
+                     none: () => noneResult);
             }
             catch
             {
             }
-            return (null, null);
+            return noneResult;
         }
 
-        private Price GetWeightedAverage(List<(Price price, CoinAmount amount)> values, int depth = 50, decimal weightDepth = 0)
+        private Maybe<Price> GetWeightedAverage(Maybe<List<(Price price, CurrencyAmount amount)>> values, int depth = 50, decimal weightDepth = 0)
         {
-            var weight = 0M;
-            var weightedTotal = 0M;
-            for (int i = 0; i < depth && i < values.Count && (weightDepth != 0 && weight < weightDepth); i++)
-            {
-                weight += values[i].amount;
-                weightedTotal += values[i].price * values[i].amount;
-            }
-
-            return weightedTotal / weight;
+            return values.Case(
+                some: (valuesData) =>
+                {
+                    var weight = 0M;
+                    var weightedTotal = 0M;
+                    for (int i = 0; i < depth && i < valuesData.Count && (weightDepth != 0 && weight < weightDepth); i++)
+                    {
+                        weight += valuesData[i].amount;
+                        weightedTotal += valuesData[i].price * valuesData[i].amount;
+                    }
+                    return weight != 0 ? Maybe<Price>.Some(weightedTotal / weight) : Maybe<Price>.None;
+                },
+                none: () => Maybe<Price>.None);
         }
         
         protected async ValueTask<T> GetValue<T>(string key, Func<ValueTask<T>> fallback, int secondsTilExpiration = 10, bool ignoreCachedValue = false)

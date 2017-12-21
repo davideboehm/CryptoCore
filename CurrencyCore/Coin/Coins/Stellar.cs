@@ -3,7 +3,7 @@
     using System;
     using System.Collections.Generic;
 
-    internal class Stellar : CoinInfo
+    internal class Stellar : CryptoCurrency
     {
         public override List<string> GetAbbreviations()
         {

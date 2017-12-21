@@ -3,7 +3,7 @@
     using System;
     using System.Collections.Generic;
 
-    internal class Dash : CoinInfo
+    internal class Dash : CryptoCurrency
     {
         public override List<string> GetAbbreviations()
         {

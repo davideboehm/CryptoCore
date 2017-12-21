@@ -7,9 +7,9 @@
     public interface IWallet
     {
         List<PublicAddress> GetAddress(AddressAlias alias);
-        CoinAmount GetAliasBalanceStartingFromTime(AddressAlias alias, long earliestTimeThatCounts);
+        CurrencyAmount GetAliasBalanceStartingFromTime(AddressAlias alias, long earliestTimeThatCounts);
         List<AddressAlias> GetAliasList();
-        CoinAmount GetBalance(AddressAlias alias);
+        CurrencyAmount GetBalance(AddressAlias alias);
         int GetBlockCount();
         int GetTransactionTimeOfLastTransaction(AddressAlias alias);
         void ImportPrivateKey(AddressPrivateKey privateKey);
@@ -17,8 +17,8 @@
         bool IsValidAddress(PublicAddress address);
         bool IsValidAddress(string address);
         List<TransactionRecord> ListTransactions(AddressAlias alias, int count = 10, int skip = 0);
-        void SendFrom(AddressAlias from, PublicAddress destinationAddress, CoinAmount amount);
-        void SendMany(AddressAlias from, List<(PublicAddress, CoinAmount)> sendTuples);
-        void SendToAddress(PublicAddress destinationAddress, CoinAmount amount);
+        void SendFrom(AddressAlias from, PublicAddress destinationAddress, CurrencyAmount amount);
+        void SendMany(AddressAlias from, List<(PublicAddress, CurrencyAmount)> sendTuples);
+        void SendToAddress(PublicAddress destinationAddress, CurrencyAmount amount);
     }
 }

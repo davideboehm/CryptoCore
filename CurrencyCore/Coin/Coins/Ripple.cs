@@ -3,7 +3,7 @@
     using System;
     using System.Collections.Generic;
 
-    internal class Ripple : CoinInfo
+    internal class Ripple : CryptoCurrency
     {
         public override List<string> GetAbbreviations()
         {
