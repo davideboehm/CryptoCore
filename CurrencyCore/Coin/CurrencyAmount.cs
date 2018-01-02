@@ -9,7 +9,7 @@
     public struct CurrencyAmount
     {
         public static CurrencyAmount Zero = (CurrencyAmount)decimal.Zero;
-        private decimal value;
+        private Numeric value;
 
         public static Maybe<CurrencyAmount> operator *(CurrencyAmount value1, Maybe<CurrencyAmount> value2)
         {
@@ -22,6 +22,16 @@
             return value1.Case(
                 some: (someData) => Maybe.Some(value2 * someData),
                 none: () => Maybe<CurrencyAmount>.None);
+        }
+
+        public static implicit operator Numeric(CurrencyAmount amount)
+        {
+            return amount.value;
+        }
+
+        public static implicit operator CurrencyAmount(Numeric amount)
+        {
+            return new CurrencyAmount { value = Math.Round((decimal)amount, 8) };
         }
 
         public static implicit operator CurrencyAmount(decimal amount)

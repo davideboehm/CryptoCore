@@ -1,4 +1,5 @@
 ﻿using Core.Functional;
+using CurrencyCore.Coin;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -9,53 +10,54 @@ namespace ExchangesCore
 {
     public struct Price
     {
-        public static Price Zero = (Price)decimal.Zero;
-        private decimal value;
+        public static Price Zero = Numeric.Zero;
+        private Numeric value;
 
         public static implicit operator Maybe<Price>(Price value)
         {
             return Maybe.Some(value);
         }
+
+        public static implicit operator Maybe<Numeric>(Price value)
+        {
+            return Maybe<Numeric>.Some(value.value);
+        }
+
+        public static implicit operator MaybeNumeric(Price value)
+        {
+            return MaybeNumeric.Some(value.value);
+        }
         
-        public static implicit operator MaybeDecimal(Price value)
-        {
-            return MaybeDecimal.Some(value.value);
-        }
-
-        public static implicit operator MaybeDouble(Price value)
-        {
-            return MaybeDouble.Some((double)value.value);
-        }
-
-        public override bool Equals(object obj)
-        {
-           return obj is Price && this == (Price)obj;
-        }
-
         public static implicit operator Price(decimal amount)
         {
             return new Price { value = Math.Round(amount, 8) };
         }
-
+                
         public static implicit operator Price(double amount)
         {
-            return new Price { value =(decimal) Math.Round(amount, 8) };
+            return new Price { value = Math.Round(amount, 8) };
         }
 
-        public static implicit operator double(Price amount)
+        public static implicit operator Price(Numeric amount)
         {
-            return (double) amount.value;
+            return new Price { value = Math.Round((decimal)amount, 8) };
         }
 
-        public static implicit operator decimal(Price amount)
+        public static implicit operator Numeric(Price amount)
         {
             return amount.value;
         }
         
+        public override bool Equals(object obj)
+        {
+           return obj is Price && this == (Price)obj;
+        }
+           
         public static bool operator ==(Price c1, Price c2)
         {
             return (c1.value == c2.value);
         }
+
         public static bool operator !=(Price c1, Price c2)
         {
             return (c1.value != c2.value);
@@ -73,22 +75,32 @@ namespace ExchangesCore
 
         public static Price operator +(Price c1, Price c2)
         {
-            return (Price)(c1.value + c2.value);
+            return (c1.value + c2.value);
         }
-
+        
         public static Price operator -(Price c1, Price c2)
         {
-            return (Price)(c1.value - c2.value);
+            return (c1.value - c2.value);
         }
 
         public static Price operator *(Price c1, Price c2)
         {
-            return (Price)(c1.value * c2.value);
+            return (c1.value * c2.value);
+        }
+
+        public static Price operator *(CurrencyAmount c1, Price c2)
+        {
+            return (Numeric) c1 * c2.value;
+        }
+
+        public static Price operator *(Price c1, CurrencyAmount c2)
+        {
+            return c2 * c1;
         }
 
         public static Price operator /(Price c1, Price c2)
         {
-            return (Price)(c1.value / c2.value);
+            return (c1.value / c2.value);
         }
 
         public override string ToString()
@@ -101,6 +113,7 @@ namespace ExchangesCore
             return this.ToString().GetHashCode();
         }
     }
+
     public struct PriceRange
     {
         public readonly Price Mean;
