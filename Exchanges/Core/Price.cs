@@ -1,13 +1,38 @@
 ﻿using Core.Functional;
+using Core.Functional.TypedValues;
 using CurrencyCore.Coin;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace ExchangesCore
 {
+    public class Price2 : TypedNumeric
+    {
+        public readonly CurrencyType stockCurrencyType, currencyType;
+        public Price2(Numeric value, CurrencyType stockCurrencyType, CurrencyType currencyType) : base(value, new RatioType<CurrencyType>(stockCurrencyType, currencyType))
+        {
+            this.stockCurrencyType = stockCurrencyType;
+            this.currencyType = currencyType;
+        }
+        public static CurrencyAmount2 operator *(CurrencyAmount2 first, Price2 second)
+        {
+            if(first.currency == second.currencyType)
+            {
+                return new CurrencyAmount2(first.Value * second.Value, second.stockCurrencyType);
+            }
+            else
+            {
+                throw new ArgumentException("The types of the price and the currency amount do not match");
+            }
+        }
+
+        public static CurrencyAmount2 operator *(Price2 first, CurrencyAmount2 second) => second * first;
+
+        public override string ToString()
+        {
+            return string.Format("{0:F8}", (decimal)this.Value) + " " + this.Units.ToString();
+        }
+    }
+
     public struct Price
     {
         public static Price Zero = Numeric.Zero;

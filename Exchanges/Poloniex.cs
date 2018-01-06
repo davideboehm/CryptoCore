@@ -174,8 +174,8 @@
                     {
                         var type = trade.Value<string>("type").Equals("sell") ? TradeType.Sell : TradeType.Buy;
                         var date = trade.Value<DateTime>("date");
-                        var rate = (Price)trade.Value<decimal>("rate");
-                        var amount = (CurrencyAmount)trade.Value<decimal>("amount");
+                        var rate = (Price)(trade.Value<decimal>("rate"));
+                        var amount =(CurrencyAmount)(trade.Value<decimal>("amount"));
                         result.Add(new CompletedTrade(type, stockType, currencyType, rate, amount, date));
                     }
                     return Maybe.Some(result);

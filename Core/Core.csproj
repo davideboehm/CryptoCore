@@ -47,6 +47,9 @@
     <Compile Include="Functional\Functions.cs" />
     <Compile Include="Functional\Maybe.cs" />
     <Compile Include="Functional\Numeric.cs" />
+    <Compile Include="Functional\TypedValues\RatioType.cs" />
+    <Compile Include="Functional\TypedValues\TypedNumeric.cs" />
+    <Compile Include="Functional\TypedValues\NumericType.cs" />
     <Compile Include="Hash.cs" />
     <Compile Include="Key.cs" />
     <Compile Include="KeyPair.cs" />

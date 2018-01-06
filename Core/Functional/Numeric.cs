@@ -6,12 +6,21 @@ namespace Core.Functional
     {
         public static Numeric Zero = new Numeric();
 
-        private Numeric()
+        protected Numeric()
         {
             type = ValueType.zero;
         }
 
-        private enum ValueType
+        protected Numeric(Numeric other)
+        {
+            this.type = other.type;
+            this.intValue = other.intValue;
+            this.doubleValue= other.doubleValue;
+            this.decimalValue = other.decimalValue;
+            this.floatValue = other.floatValue;
+        }
+
+        protected enum ValueType
         {
             zero,
             intType,
@@ -748,6 +757,33 @@ namespace Core.Functional
                 type = ValueType.floatType,
                 floatValue = value
             };
+        }
+
+        public override string ToString()
+        {
+            switch (this.type)
+            {
+                case ValueType.intType:
+                    {
+                        return this.intValue.ToString();
+                    }
+                case ValueType.doubleType:
+                    {
+                        return this.doubleValue.ToString();
+                    }
+                case ValueType.decimalType:
+                    {
+                        return this.decimalValue.ToString();
+                    }
+                case ValueType.floatType:
+                    {
+                        return this.floatValue.ToString();
+                    }
+                default:
+                    {
+                       return "0";
+                    }
+            }
         }
     }
 }
