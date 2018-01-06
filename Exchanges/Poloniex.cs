@@ -22,7 +22,7 @@
         private static readonly ConcurrentQueue<Action> RequestQueue = new ConcurrentQueue<Action>();
 
         private static Task CurrentRequest;
-        static Poloniex() 
+        static Poloniex()
         {
             System.Timers.Timer timer = new System.Timers.Timer()
             {
@@ -81,7 +81,7 @@
         }
 
         public async ValueTask<bool> ExecuteTrade(Trade trade, Price price, CurrencyAmount amount, bool postOnly)
-        {            
+        {
             var command = trade.Type == TradeType.Buy ? "buy" : "sell";
             var paramDictionary = new Dictionary<string, string>
             {
@@ -103,8 +103,7 @@
         {
             var balances = await this.GetBalances();
             return balances.Case(
-                some: (dict) => dict.TryGetValue(coinType, out var result) ? Maybe.Some(result) : Maybe<CurrencyAmount>.None,
-                none: () => Maybe<CurrencyAmount>.None);
+                some: (dict) => dict.TryGetValue(coinType, out var result) ? Maybe.Some(result) : Maybe<CurrencyAmount>.None);
         }
 
         public override async ValueTask<Maybe<Dictionary<CurrencyType, CurrencyAmount>>> GetBalances(bool ignoreCache = false)
@@ -157,32 +156,32 @@
             var currencyPair = this.GetCurrencyPair(stockType, currencyType);
             var key = "TradeHistory:" + currencyPair;
 
-            return await this.GetValue< Maybe<List<CompletedTrade>>>(key, async () =>
-            {
-                var paramDictionary = new Dictionary<string, string>
-                {
+            return await this.GetValue<Maybe<List<CompletedTrade>>>(key, async () =>
+           {
+               var paramDictionary = new Dictionary<string, string>
+               {
                     {"currencyPair",  currencyPair},
                     {"depth", depth.ToString()}
-                };
+               };
 
-                var response = await this.SendCommand<JContainer>("returnTradeHistory", paramDictionary);
-                List<CompletedTrade> result = null;
-                if (response != null)
-                {
-                    result = new List<CompletedTrade>();
-                    foreach (var trade in response)
-                    {
-                        var type = trade.Value<string>("type").Equals("sell") ? TradeType.Sell : TradeType.Buy;
-                        var date = trade.Value<DateTime>("date");
-                        var rate = (Price)trade.Value<decimal>("rate");
-                        var amount = (CurrencyAmount)trade.Value<decimal>("amount");
-                        result.Add(new CompletedTrade(type, stockType, currencyType, rate, amount, date));
-                    }
-                    return Maybe.Some(result);
-                }
-                return Maybe<List<CompletedTrade>>.None;
-            },
-            secondsTilExpiration:20);
+               var response = await this.SendCommand<JContainer>("returnTradeHistory", paramDictionary);
+               List<CompletedTrade> result = null;
+               if (response != null)
+               {
+                   result = new List<CompletedTrade>();
+                   foreach (var trade in response)
+                   {
+                       var type = trade.Value<string>("type").Equals("sell") ? TradeType.Sell : TradeType.Buy;
+                       var date = trade.Value<DateTime>("date");
+                       var rate = (Price)trade.Value<decimal>("rate");
+                       var amount = (CurrencyAmount)trade.Value<decimal>("amount");
+                       result.Add(new CompletedTrade(type, stockType, currencyType, rate, amount, date));
+                   }
+                   return Maybe.Some(result);
+               }
+               return Maybe<List<CompletedTrade>>.None;
+           },
+            secondsTilExpiration: 20);
         }
         public override async ValueTask<Maybe<Dictionary<string, (List<(Price, CurrencyAmount)> asks, List<(Price, CurrencyAmount)> bids)>>> GetOrderBooks(int depth = 50)
         {
@@ -203,7 +202,7 @@
                         var data = ParseOrderBook(market.Value);
                         if (data.Item1.HasValue() && data.Item2.HasValue())
                         {
-                            result.Add(pair,(data.Item1.Value(),data.Item2.Value()));
+                            result.Add(pair, (data.Item1.Value(), data.Item2.Value()));
                         }
                     }
                     return Maybe.Some(result);
@@ -217,39 +216,39 @@
         {
             var currencyPair = this.GetCurrencyPair(stockType, currencyType);
             var key = "OrderBook:" + currencyPair;
-            return await this.GetValue<(Maybe < List<(Price, CurrencyAmount)>>, Maybe < List<(Price, CurrencyAmount)>>)>(key, async () =>
-            {
+            return await this.GetValue<(Maybe<List<(Price, CurrencyAmount)>>, Maybe<List<(Price, CurrencyAmount)>>)>(key, async () =>
+        {
                 //try to grab the full order dictionary from the cache
-                var fullOrderDictionary = await this.GetValue<Dictionary<string, (Maybe < List <(Price, CurrencyAmount)>> asks, Maybe < List <(Price, CurrencyAmount)>> bids)>>
-                ("orderbook", 
-                async () =>
-                {
+                var fullOrderDictionary = await this.GetValue<Dictionary<string, (Maybe<List<(Price, CurrencyAmount)>> asks, Maybe<List<(Price, CurrencyAmount)>> bids)>>
+            ("orderbook",
+            async () =>
+            {
                     //no op
-                    return await Task.FromResult<Dictionary<string, (Maybe < List <(Price, CurrencyAmount)>> asks, Maybe < List <(Price, CurrencyAmount)>> bids)>>(null);
-                });
+                    return await Task.FromResult<Dictionary<string, (Maybe<List<(Price, CurrencyAmount)>> asks, Maybe<List<(Price, CurrencyAmount)>> bids)>>(null);
+            });
 
-                if(fullOrderDictionary != null && fullOrderDictionary.TryGetValue(currencyPair, out var cachedResult))
-                {
-                    return cachedResult;
-                }
+            if (fullOrderDictionary != null && fullOrderDictionary.TryGetValue(currencyPair, out var cachedResult))
+            {
+                return cachedResult;
+            }
 
                 //there is no cached result so try to get the individual orderbook
                 var paramDictionary = new Dictionary<string, string>
-                {
+            {
                     {"currencyPair", currencyPair },
                     {"depth", depth.ToString()}
-                };
+            };
 
-                (Maybe<List<(Price, CurrencyAmount)>>, Maybe<List<(Price, CurrencyAmount)>>) book = (Maybe<List<(Price, CurrencyAmount)>>.None, Maybe<List<(Price, CurrencyAmount)>>.None);
+            (Maybe<List<(Price, CurrencyAmount)>>, Maybe<List<(Price, CurrencyAmount)>>) book = (Maybe<List<(Price, CurrencyAmount)>>.None, Maybe<List<(Price, CurrencyAmount)>>.None);
 
-                var response = await this.SendCommand<JContainer>("returnOrderBook", paramDictionary);
+            var response = await this.SendCommand<JContainer>("returnOrderBook", paramDictionary);
 
-                if (response != null)
-                {
-                    book = ParseOrderBook(response);
-                }
-                return book;
-            });
+            if (response != null)
+            {
+                book = ParseOrderBook(response);
+            }
+            return book;
+        });
         }
 
         public override async ValueTask<Maybe<List<LoanOffer>>> GetLoanOrderBook(CurrencyType currencyType, int depth = 50)
@@ -297,7 +296,7 @@
                     }
                     askList.Add(((Price)priceDecimal, (CurrencyAmount)coinDecimal));
                 }
-                if(askList.Count>0)
+                if (askList.Count > 0)
                 {
                     askResult = Maybe.Some(askList);
                 }
@@ -360,7 +359,7 @@
                 }
                 return (buyMarkets, sellMarkets);
             }
-            return (null,null);
+            return (null, null);
         }
 
         public override async ValueTask<Maybe<Dictionary<CurrencyType, ICollection<CurrencyType>>>> GetBuyMarkets()
@@ -390,6 +389,60 @@
             }
             return Maybe<Dictionary<CurrencyType, ICollection<CurrencyType>>>.None;
         }
+
+        public async ValueTask<Maybe<decimal>> Get24HourChange(CurrencyType stock, CurrencyType currency)
+        {
+            var data = await this.GetTickerData();
+            return data.Case(
+                some: (value) =>
+                 {
+                     if (value.TryGetValue((stock, currency), out var tickerData))
+                     {
+                         return Maybe.Some(tickerData.percentChange);
+                     }
+                     return Maybe<decimal>.None;
+                 });
+        }
+
+        private async ValueTask<Maybe<Dictionary<(CurrencyType stock, CurrencyType currency), TickerData>>> GetTickerData()
+        {
+            var resultContainer = await this.SendCommand<JContainer>("returnTicker");
+            if (resultContainer != null)
+            {
+                var result = new Dictionary<(CurrencyType stock, CurrencyType currency), TickerData>();
+                foreach (var currencyPair in resultContainer)
+                {
+                    var pair = currencyPair.Path.Split('_');
+                    if (pair.Length == 2)
+                    {
+                        var currency = CryptoCurrency.GetCurrencyType(pair[0]);
+                        var stock = CryptoCurrency.GetCurrencyType(pair[1]);
+                        if (stock != CurrencyType.None && currency != CurrencyType.None)
+                        {
+                            foreach (var data in currencyPair)
+                            {
+                                if (data["isfrozen"].Value<int>() == 0)
+                                {
+                                    result.Add((stock, currency), new TickerData(
+                                        currencyType: currency,
+                                        stockType: stock,
+                                        lowestAsk: data["lowestask"].Value<decimal>(),
+                                        last: data["last"].Value<decimal>(),
+                                        highestBid: data["highestbid"].Value<decimal>(),
+                                        percentChange: data["percentchange"].Value<decimal>(),
+                                        baseVolume: data["basevolume"].Value<decimal>(),
+                                        quoteVolume: data["quotevolume"].Value<decimal>()
+                                    ));
+                                }
+                            }
+                        }
+                    }
+                }
+                return Maybe.Some(result);
+            }
+            return Maybe<Dictionary<(CurrencyType stock, CurrencyType currency), TickerData>>.None;
+        }
+
 
         public override async ValueTask<Maybe<Dictionary<CurrencyType, ICollection<CurrencyType>>>> GetSellMarkets()
         {
@@ -438,15 +491,15 @@
                     {
                         return CryptoCurrency.GetDefaultAbbreviation(coinType);
                     }
-            }        
+            }
         }
-        
+
         private async ValueTask<T> SendCommand<T>(string method, Dictionary<string, string> paramDictionary = null) where T : class
         {
             return JsonConvert.DeserializeObject<T>(await this.SendCommand(method, paramDictionary) ?? "") as T;
         }
         private async ValueTask<string> SendCommand(string method, Dictionary<string, string> paramDictionary = null)
-        {            
+        {
             if (paramDictionary == null)
             {
                 paramDictionary = new Dictionary<string, string>();
@@ -471,18 +524,18 @@
                 case "returnLoanOrders":
                 case "returnTradeHistory":
                     {
-                        return await this.publicCaller.MakeCall("?command="+method, paramDictionary);
+                        return await this.publicCaller.MakeCall("?command=" + method, paramDictionary);
                     }
                 default:
                     throw new ArgumentException("Don't know if the requested method is a public or private api call:" + method);
             }
-        }     
+        }
         private class PrivateCaller : SignedPostCaller
         {
             public PrivateCaller(Uri uri, ILogger logger, KeyPair<string, string> keys, ConcurrentQueue<Action> requestQueue) : base(uri, logger, keys, requestQueue)
             {
             }
-            
+
             /// <summary>
             /// Call an api method that has parameters.
             /// </summary>
@@ -513,5 +566,24 @@
                 request.Headers.Add("Sign", signature);
             }
         }
-    }  
+        private struct TickerData
+        {
+            public CurrencyType stockType, currencyType;
+            public Price last, lowestAsk, highestBid;
+            public decimal percentChange;
+            public CurrencyAmount baseVolume, quoteVolume;
+
+            public TickerData(CurrencyType stockType, CurrencyType currencyType, Price last, Price lowestAsk, Price highestBid, decimal percentChange, CurrencyAmount baseVolume, CurrencyAmount quoteVolume)
+            {
+                this.stockType = stockType;
+                this.currencyType = currencyType;
+                this.last = last;
+                this.lowestAsk = lowestAsk;
+                this.highestBid = highestBid;
+                this.percentChange = percentChange;
+                this.baseVolume = baseVolume;
+                this.quoteVolume = quoteVolume;
+            }
+        }
+    }
 }

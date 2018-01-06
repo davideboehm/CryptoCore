@@ -42,8 +42,10 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Math\Arrays\Array.cs" />
     <Compile Include="Base58.cs" />
     <Compile Include="ByteArrayUtil.cs" />
+    <Compile Include="CombinationsUtil.cs" />
     <Compile Include="Functional\Maybe.cs" />
     <Compile Include="Hash.cs" />
     <Compile Include="Key.cs" />

@@ -57,6 +57,9 @@
     <Compile Include="Address\PublicAddress.cs" />
     <Compile Include="Address\WIFString.cs" />
     <Compile Include="Coin\CoinAmount.cs" />
+    <Compile Include="Coin\Coins\STEEM.cs" />
+    <Compile Include="Coin\Coins\Bytecoin.cs" />
+    <Compile Include="Coin\Coins\NXT.cs" />
     <Compile Include="Coin\CryptoCurrency.cs" />
     <Compile Include="Coin\Coins\BitcoinCash.cs" />
     <Compile Include="Coin\Coins\Bitcoin.cs" />

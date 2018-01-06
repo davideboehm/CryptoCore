@@ -1,4 +1,5 @@
-﻿using Exchanges;
+﻿using CurrencyCore.Coin;
+using Exchanges;
 using Logging;
 using System;
 using System.Collections.Generic;
@@ -13,7 +14,7 @@ namespace test
         static Gemini gemini = new Gemini(new ConsoleLogger(), null);
         static void Main(string[] args)
         {
-            var test = gemini.GetMarkets().Result;
+            var test = gemini.GetTradeHistory(CurrencyType.Bitcoin,CurrencyType.USD).Result;
         }
     }
 }

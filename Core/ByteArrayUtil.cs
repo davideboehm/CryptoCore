@@ -1,11 +1,81 @@
 ﻿namespace Core
 {
     using System;
+    using System.Collections;
     using System.Collections.Generic;
     using System.Text;
 
     public class ByteArrayUtil
     {
+        public static IEnumerable<byte[]> GetCombinations(int arrayLength, int numberOfBitsSet)
+        {
+            var bitlength = arrayLength * 8;
+            foreach (var combo in CombinationsUtil.GetCombinations(bitlength, numberOfBitsSet))
+            {
+                yield return GetByteArrayWithValuesSet(arrayLength, combo);
+            }            
+        }
+
+        public static byte[] GetByteArrayWithValuesSet(int length, params int[] bitsSet)
+        {
+            BitArray array = new BitArray(length * 8);
+
+            foreach (var currentBit in bitsSet)
+            {
+                array.Set(currentBit, true);
+            }
+
+            return ByteArrayUtil.ConvertToByteArray(array);
+        }
+
+        private static byte[] ConvertToByteArray(BitArray bits)
+        {
+            if (bits.Count % 8 != 0)
+            {
+                throw new ArgumentException("illegal number of bits");
+            }
+
+            var result = new byte[bits.Count / 8];
+            for (int i = 0; i < bits.Length / 8; i++)
+            {
+                byte b = 0;
+                if (bits.Get(i * 8 + 0))
+                {
+                    b++;
+                }
+                if (bits.Get(i * 8 + 1))
+                {
+                    b += 2;
+                }
+                if (bits.Get(i * 8 + 2))
+                {
+                    b += 4;
+                }
+                if (bits.Get(i * 8 + 3))
+                {
+                    b += 8;
+                }
+                if (bits.Get(i * 8 + 4))
+                {
+                    b += 16;
+                }
+                if (bits.Get(i * 8 + 5))
+                {
+                    b += 32;
+                }
+                if (bits.Get(i * 8 + 6))
+                {
+                    b += 64;
+                }
+                if (bits.Get(i * 8 + 7))
+                {
+                    b += 128;
+                }
+                result[i] = b;
+            }
+            return result;
+        }
+
         public static byte[] HexStringToByteArray(string source)
         {
             //remove blanks

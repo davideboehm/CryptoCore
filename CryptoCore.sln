@@ -29,6 +29,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AutomatedTradingBot", "Auto
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "test", "test\test.csproj", "{486B0EFE-75A9-4853-B046-1096EE995C75}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HashExperiment", "HashExperiment\HashExperiment.csproj", "{0422B437-2B89-43B9-9E0E-D04371F88D1D}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -67,6 +69,10 @@ Global
 		{486B0EFE-75A9-4853-B046-1096EE995C75}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{486B0EFE-75A9-4853-B046-1096EE995C75}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{486B0EFE-75A9-4853-B046-1096EE995C75}.Release|Any CPU.Build.0 = Release|Any CPU
+		{0422B437-2B89-43B9-9E0E-D04371F88D1D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0422B437-2B89-43B9-9E0E-D04371F88D1D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{0422B437-2B89-43B9-9E0E-D04371F88D1D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{0422B437-2B89-43B9-9E0E-D04371F88D1D}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

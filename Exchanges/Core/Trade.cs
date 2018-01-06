@@ -6,6 +6,7 @@ namespace ExchangesCore
     {
         Buy,
         Sell,
+        Auction
     }
     public struct Trade
     {

@@ -87,11 +87,36 @@ namespace Core.Functional
             return value;
         }
 
+        public void Case(Action<T> some, Action none)
+        {
+            if (this.HasValue())
+            {
+                some(this.Value());
+            }
+            else
+            {
+                none();
+            }
+        }
+        public void Case(Action<T> some)
+        {
+            if (this.HasValue())
+            {
+                some(this.Value());
+            }
+        }
+
         public U Case<U>(Func<T, U> some, Func<U> none)
         {
             return this.HasValue()
               ? some(this.Value())
               : none();
+        }
+        public Maybe<U> Case<U>(Func<T, Maybe<U>> some) 
+        {
+            return this.HasValue()
+              ? some(this.Value())
+              : Maybe<U>.None;
         }
     }
 
