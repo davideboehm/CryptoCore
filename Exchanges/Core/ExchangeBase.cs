@@ -57,7 +57,7 @@ namespace ExchangesCore
                              var end = historyData.First().DateCompleted;
                              var timeWeight = Math.Max((end - start).TotalSeconds / historyData.Count, 1);
                              var totalWeight = 0M;
-                             var weightedTotalPrice = 0M;
+                             Price weightedTotalPrice = 0M;
                              for (int i = 0; i < historyData.Count && i < 40; i++)
                              {
                                  var weight = historyData[i].Amount * (decimal)((historyData[i].DateCompleted - start).TotalSeconds / timeWeight);
@@ -66,8 +66,8 @@ namespace ExchangesCore
                              }
                              if (totalWeight > 0)
                              {
-                                 var averagePrice = (double)(weightedTotalPrice / totalWeight);
-                                 var variance = historyData.Take(40).Average(historyItem => ((double)(historyItem.Price - averagePrice) * (double)(historyItem.Price - averagePrice)));
+                                 var averagePrice = weightedTotalPrice / totalWeight;
+                                 var variance = historyData.Take(40).Average(historyItem => (Numeric)((historyItem.Price - averagePrice) * (historyItem.Price - averagePrice)));
                                  Price stdDeviation = Math.Sqrt(variance);
 
                                  var averageBid = this.GetWeightedAverage(bids, 15, averageTradeAmount * 5);
@@ -76,8 +76,8 @@ namespace ExchangesCore
 
                                  if (averageBid.HasValue() && averageAsk.HasValue())
                                  {
-                                     var buyMedian = .10 * averagePrice + .90 * (.10M * averageBid.Value() + .90M * averageAsk.Value());
-                                     var sellMedian = .10 * averagePrice + .90 * (.10M * averageAsk.Value() + .90M * averageBid.Value());
+                                     var buyMedian = .10 * averagePrice + .90 * (.10 * averageBid.Value() + .90 * averageAsk.Value());
+                                     var sellMedian = .10 * averagePrice + .90 * (.10 * averageAsk.Value() + .90 * averageBid.Value());
                                      return (Maybe.Some(new PriceRange(sellMedian, stdDeviation)),
                                          Maybe.Some(new PriceRange(buyMedian, stdDeviation)));
                                  }
@@ -100,7 +100,7 @@ namespace ExchangesCore
                 some: (valuesData) =>
                 {
                     var weight = 0M;
-                    var weightedTotal = 0M;
+                    Price weightedTotal = 0M;
                     for (int i = 0; i < depth && i < valuesData.Count && (weightDepth != 0 && weight < weightDepth); i++)
                     {
                         weight += valuesData[i].amount;

@@ -119,7 +119,135 @@ namespace Core.Functional
               : Maybe<U>.None;
         }
     }
+    public struct MaybeNumeric : IMaybe<Numeric>
+    {
+        public static MaybeNumeric Some(Numeric value)
+        {
+            return new MaybeNumeric(Maybe.Some(value));
+        }
 
+        private Maybe<Numeric> underlying;
+        private MaybeNumeric(Maybe<Numeric> value)
+        {
+            this.underlying = value;
+        }
+
+        public static MaybeNumeric operator /(MaybeNumeric value1, MaybeNumeric value2)
+        {
+            if (value1.HasValue() && value2.HasValue() && value2.Value() != 0)
+            {
+                return new MaybeNumeric(Maybe.Some(value1.Value() / value2.Value()));
+            }
+            return MaybeNumeric.None;
+        }
+
+        public static MaybeNumeric operator /(MaybeNumeric value1, Numeric value2)
+        {
+            if (value1.HasValue() && value2 != 0)
+            {
+                return new MaybeNumeric(Maybe.Some(value1.Value() / value2));
+            }
+            return MaybeNumeric.None;
+        }
+
+        public static MaybeNumeric operator /(Numeric value1, MaybeNumeric value2)
+        {
+            if ( value2.HasValue() && value2.Value() != 0)
+            {
+                return new MaybeNumeric(Maybe.Some(value1 / value2.Value()));
+            }
+            return MaybeNumeric.None;
+        }
+
+
+        public static MaybeNumeric operator +(MaybeNumeric value2, Numeric value1)
+        {
+            if (value2.HasValue())
+            {
+                return new MaybeNumeric(Maybe.Some(value1 + value2.Value()));
+            }
+            return MaybeNumeric.None;
+        }
+
+        public static MaybeNumeric operator *(MaybeNumeric value2, Numeric value1)
+        {
+            if (value2.HasValue())
+            {
+                return new MaybeNumeric(Maybe.Some(value1 * value2.Value()));
+            }
+            return MaybeNumeric.None;
+        }
+                
+        public static MaybeNumeric operator +(Numeric value1, MaybeNumeric value2)
+        {
+            if (value2.HasValue())
+            {
+                return new MaybeNumeric(Maybe.Some(value1 + value2.Value()));
+            }
+            return MaybeNumeric.None;
+        }
+
+        public static MaybeNumeric operator *(Numeric value1, MaybeNumeric value2)
+        {
+            if (value2.HasValue())
+            {
+                return new MaybeNumeric(Maybe.Some(value1 * value2.Value()));
+            }
+            return MaybeNumeric.None;
+        }
+                
+        public static MaybeNumeric operator +(MaybeNumeric value1, MaybeNumeric value2)
+        {
+            if (value1.HasValue() && value2.HasValue())
+            {
+                return new MaybeNumeric(Maybe.Some(value1.Value() + value2.Value()));
+            }
+            return MaybeNumeric.None;
+        }
+
+        public static MaybeNumeric operator *(MaybeNumeric value1, MaybeNumeric value2)
+        {
+            if (value1.HasValue() && value2.HasValue())
+            {
+                return new MaybeNumeric(Maybe.Some(value1.Value() * value2.Value()));
+            }
+            return MaybeNumeric.None;
+        }
+
+        public static MaybeNumeric None => new MaybeNumeric(Maybe<Numeric>.None);
+
+        public static implicit operator MaybeNumeric(Numeric current)
+        {
+            return new MaybeNumeric(Maybe.Some(current));
+        }
+
+        public static implicit operator MaybeNumeric(Maybe<Numeric> current)
+        {
+            return new MaybeNumeric(current);
+        }
+        
+        public static implicit operator Maybe<Numeric>(MaybeNumeric current)
+        {
+            return current.underlying;
+        }
+
+        public U Case<U>(Func<Numeric, U> some, Func<U> none)
+        {
+            return underlying.Case(some, none);
+        }
+
+        public bool HasValue()
+        {
+            return underlying.HasValue();
+        }
+
+        public Numeric Value()
+        {
+            return underlying.Value();
+        }
+    }
+
+    /*
     public struct MaybeDecimal : IMaybe<Decimal>
     {
         public static MaybeDecimal Some(Decimal value)
@@ -375,5 +503,5 @@ namespace Core.Functional
         {
             return underlying.Value();
         }
-    }
+    }*/
 }

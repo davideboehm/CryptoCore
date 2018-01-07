@@ -108,7 +108,7 @@
 
         public override async ValueTask<Maybe<Dictionary<CurrencyType, CurrencyAmount>>> GetBalances(bool ignoreCache = false)
         {
-            Func<ValueTask<Maybe<Dictionary<CurrencyType, CurrencyAmount>>>> getBalances = async () =>
+            async ValueTask<Maybe<Dictionary<CurrencyType, CurrencyAmount>>> getBalances()
             {
                 var jsonResult = await this.SendCommand<Dictionary<string, decimal>>("returnBalances");
                 if (jsonResult != null)
@@ -125,7 +125,7 @@
                     return Maybe<Dictionary<CurrencyType, CurrencyAmount>>.Some(result);
                 }
                 return Maybe<Dictionary<CurrencyType, CurrencyAmount>>.None;
-            };
+            }
 
             if (ignoreCache)
             {
