@@ -105,7 +105,7 @@
 
                         if (!result.ContainsKey(coinType))
                         {
-                            result.Add(coinType, (CurrencyAmount)coinEntry.Value<decimal>("available"));
+                            result.Add(coinType, new CurrencyAmount(coinEntry.Value<decimal>("available"), coinType));
                         }
                     }
                     return Maybe < Dictionary < CurrencyType, CurrencyAmount >>.Some(result);
@@ -139,8 +139,8 @@
                     {
                         var type = trade.Value<string>("ordertype").Equals("sell") ? TradeType.Sell : TradeType.Buy;
                         var date = trade.Value<DateTime>("timestamp");
-                        var rate = (Price)trade.Value<decimal>("price");
-                        var amount = (CurrencyAmount)trade.Value<decimal>("quantity");
+                        var rate = new Price(trade.Value<decimal>("price"), stockType, currencyType);
+                        var amount = new CurrencyAmount(trade.Value<decimal>("quantity"), stockType);
                         result.Add(new CompletedTrade(type, stockType, currencyType, rate, amount, date));
                     }
                     return Maybe.Some(result);
@@ -176,12 +176,12 @@
                     var asks = jsonResult["sell"];
                     foreach (var ask in asks)
                     {
-                        askList.Add(((Price)ask.Value<decimal>("rate"), (CurrencyAmount)ask.Value<decimal>("quantity")));
+                        askList.Add((new Price(ask.Value<decimal>("rate"), stockType, currencyType), new CurrencyAmount(ask.Value<decimal>("quantity"), stockType)));
                     }
                     var bids = jsonResult["buy"];
                     foreach (var bid in bids)
                     {
-                        bidList.Add(((Price)bid.Value<decimal>("rate"), (CurrencyAmount)bid.Value<decimal>("quantity")));
+                        bidList.Add((new Price(bid.Value<decimal>("rate"), stockType, currencyType), new CurrencyAmount(bid.Value<decimal>("quantity"), stockType)));
                     }
                     return (Maybe.Some(askList), Maybe.Some(bidList));
                 }

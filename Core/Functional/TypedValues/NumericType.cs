@@ -6,14 +6,20 @@ namespace Core.Functional
 {
     public class NumericType<T> : NumericType
     {
+        public new static readonly NumericType<T> Unit = new NumericType<T>();
+
         public NumericType(T value, int power = 1) : base(new TypeStruct(value.ToString(), power))
+        {
+        }
+
+        protected NumericType() : base(new TypeStruct("Unit", 0))
         {
         }
     }
 
     public class NumericType
     {
-        protected static readonly NumericType Unit = new NumericType();
+        public static readonly NumericType Unit = new NumericType();
 
         protected struct TypeStruct
         {
@@ -26,9 +32,21 @@ namespace Core.Functional
                 this.Power = power;
             }
 
+            public override bool Equals(object obj)
+            {
+                if (!(obj is TypeStruct))
+                {
+                    return false;
+                }
+
+                var @struct = (TypeStruct)obj;
+                return Type == @struct.Type &&
+                       Power == @struct.Power;
+            }
+
             public override string ToString()
             {
-                return this.Power != 0  ? (this.Type + (this.Power != 1 ? $"^{this.Power}" : "")): "Unit" ;
+                return this.Power != 0 ? (this.Type + (this.Power != 1 ? $"^{this.Power}" : "")) : "Unit";
             }
         }
 
@@ -53,7 +71,7 @@ namespace Core.Functional
         protected NumericType(params TypeStruct[] types)
         {
             this.types = new SortedList<string, TypeStruct>();
-            foreach(var type in types)
+            foreach (var type in types)
             {
                 this.types.Add(type.Type, type);
             }
@@ -64,7 +82,7 @@ namespace Core.Functional
             this.types = new SortedList<string, TypeStruct>();
             foreach (var type in types)
             {
-                this.types.Add(type.Type, type);                
+                this.types.Add(type.Type, type);
             }
         }
 
@@ -84,7 +102,7 @@ namespace Core.Functional
             var result = "";
             if (this.types.Values.Count == 1)
             {
-                result = this.types.Values[0].ToString();              
+                result = this.types.Values[0].ToString();
             }
             else
             {
@@ -97,12 +115,12 @@ namespace Core.Functional
             }
             return result;
         }
-        
+
         public string ToString(string formatting, params object[] args)
         {
-            return string.Format(formatting, args) + this.ToString();         
+            return string.Format(formatting, args) + this.ToString();
         }
-           
+
         public static NumericType operator *(NumericType first, NumericType second) => first.Multiply(second);
 
         public virtual NumericType Multiply(NumericType second)
@@ -114,12 +132,12 @@ namespace Core.Functional
 
             var resultTypes = new List<TypeStruct>();
 
-            foreach(var key in this.types.Keys)
+            foreach (var key in this.types.Keys)
             {
-                if(second.types.TryGetValue(key, out var otherType))
+                if (second.types.TryGetValue(key, out var otherType))
                 {
                     var newPower = this.types[key].Power + otherType.Power;
-                    if(newPower!=0)
+                    if (newPower != 0)
                     {
                         resultTypes.Add(new TypeStruct(key, newPower));
                     }
@@ -138,6 +156,35 @@ namespace Core.Functional
         public virtual NumericType Divide(NumericType second)
         {
             return this.Multiply(new NumericType(second.types.Values.Select((value) => new TypeStruct(value.Type, -1 * value.Power))));
+        }
+
+        public static bool operator ==(NumericType first, NumericType second)        
+            {
+                return !first.Equals(null) && !second.Equals(null) && first.Equals(second);
+            }
+
+        public static bool operator !=(NumericType first, NumericType second)
+            {
+                return !first.Equals(null) && !second.Equals(null) && !(first.Equals(second));
+            }
+
+        public bool Equals(NumericType other)
+        {
+            var isNotNull = !(other is null);
+            if (isNotNull)
+            {
+                var allTypesMatch = this.types.Count == other.types.Count &&
+                    this.types.All((pair) => other.types.TryGetValue(pair.Key, out var otherValue) && otherValue.Power == pair.Value.Power);
+                var isEitherUnit = this.types.ContainsKey("Unit") || other.types.ContainsKey("Unit");
+
+                return allTypesMatch || isEitherUnit;
+            }
+            return false;
+        }
+
+        public override bool Equals(object obj)
+        {
+           return !(obj is null) && this.Equals(obj as NumericType);
         }
     }   
 }

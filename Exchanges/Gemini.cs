@@ -180,7 +180,7 @@ namespace Exchanges
                         {
                             coinDecimal = decimal.Parse(ask["amount"].ToString(), System.Globalization.NumberStyles.Float);
                         }
-                        askList.Add(((Price)priceDecimal, (CurrencyAmount)coinDecimal));
+                        askList.Add((new Price(priceDecimal, stockType, currencyType), new CurrencyAmount(coinDecimal, stockType)));
                     }
                     if (askList.Count > 0)
                     {
@@ -199,7 +199,7 @@ namespace Exchanges
                         {
                             coinDecimal = decimal.Parse(bid["amount"].ToString(), System.Globalization.NumberStyles.Float);
                         }
-                        bidList.Add(((Price)priceDecimal, (CurrencyAmount)coinDecimal));
+                        bidList.Add((new Price(priceDecimal, stockType, currencyType), new CurrencyAmount(coinDecimal, stockType)));
                     }
                     if (bidList.Count > 0)
                     {
@@ -236,8 +236,8 @@ namespace Exchanges
                 {
                     var type = trade.Value<string>("type").Equals("sell") ? TradeType.Sell : (trade.Value<string>("type").Equals("buy")? TradeType.Buy : TradeType.Auction);
                     var date = DateTimeOffset.FromUnixTimeSeconds(trade.Value<long>("timestamp")).UtcDateTime;
-                    var rate = (Price)trade.Value<decimal>("price");
-                    var amount = (CurrencyAmount)trade.Value<decimal>("amount");
+                    var rate = new Price(trade.Value<decimal>("price"), stockType,currencyType);
+                    var amount = new CurrencyAmount(trade.Value<decimal>("amount"), stockType);
                     result.Add(new CompletedTrade(type, stockType, currencyType, rate, amount, date));
                 }
                 return Maybe.Some(result);

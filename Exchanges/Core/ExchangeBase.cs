@@ -56,9 +56,9 @@ namespace ExchangesCore
                              var start = historyData.Last().DateCompleted;
                              var end = historyData.First().DateCompleted;
                              var timeWeight = Math.Max((end - start).TotalSeconds / historyData.Count, 1);
-                             var totalWeight = 0M;
-                             Price weightedTotalPrice = 0M;
-                             for (int i = 0; i < historyData.Count && i < 40; i++)
+                             var totalWeight = historyData[0].Amount * (decimal)((historyData[0].DateCompleted - start).TotalSeconds / timeWeight);
+                             var weightedTotalPrice = historyData[0].Price * totalWeight;
+                             for (int i = 1; i < historyData.Count && i < 40; i++)
                              {
                                  var weight = historyData[i].Amount * (decimal)((historyData[i].DateCompleted - start).TotalSeconds / timeWeight);
                                  totalWeight += weight;
@@ -66,18 +66,18 @@ namespace ExchangesCore
                              }
                              if (totalWeight > 0)
                              {
-                                 var averagePrice = weightedTotalPrice / totalWeight;
+                                 var averagePrice = new Price(weightedTotalPrice / totalWeight);
                                  var variance = historyData.Take(40).Average(historyItem => (Numeric)((historyItem.Price - averagePrice) * (historyItem.Price - averagePrice)));
-                                 Price stdDeviation = Math.Sqrt(variance);
+                                 Price stdDeviation = new Price(Math.Sqrt(variance), averagePrice.stockCurrencyType, averagePrice.currencyType);
 
-                                 var averageBid = this.GetWeightedAverage(bids, 15, averageTradeAmount * 5);
+                                 var averageBid = this.GetWeightedAverage(bids, 15, (decimal)averageTradeAmount * 5);
 
-                                 var averageAsk = this.GetWeightedAverage(asks, 15, averageTradeAmount * 5);
+                                 var averageAsk = this.GetWeightedAverage(asks, 15, (decimal)averageTradeAmount * 5);
 
                                  if (averageBid.HasValue() && averageAsk.HasValue())
                                  {
-                                     var buyMedian = .10 * averagePrice + .90 * (.10 * averageBid.Value() + .90 * averageAsk.Value());
-                                     var sellMedian = .10 * averagePrice + .90 * (.10 * averageAsk.Value() + .90 * averageBid.Value());
+                                     var buyMedian = .10M * averagePrice + .90 * (.10 * averageBid.Value() + .90 * averageAsk.Value());
+                                     var sellMedian = .10M * averagePrice + .90 * (.10 * averageAsk.Value() + .90 * averageBid.Value());
                                      return (Maybe.Some(new PriceRange(sellMedian, stdDeviation)),
                                          Maybe.Some(new PriceRange(buyMedian, stdDeviation)));
                                  }
@@ -99,14 +99,14 @@ namespace ExchangesCore
             return values.Case(
                 some: (valuesData) =>
                 {
-                    var weight = 0M;
-                    Price weightedTotal = 0M;
+                    var weight = CurrencyAmount.Zero;
+                    var weightedTotal = CurrencyAmount.Zero;
                     for (int i = 0; i < depth && i < valuesData.Count && (weightDepth != 0 && weight < weightDepth); i++)
                     {
-                        weight += valuesData[i].amount;
+                        weight = weight + valuesData[i].amount;
                         weightedTotal += valuesData[i].price * valuesData[i].amount;
                     }
-                    return weight != 0 ? Maybe<Price>.Some(weightedTotal / weight) : Maybe<Price>.None;
+                    return weight != 0 ? Maybe<Price>.Some( new Price(weightedTotal / weight)) : Maybe<Price>.None;
                 },
                 none: () => Maybe<Price>.None);
         }

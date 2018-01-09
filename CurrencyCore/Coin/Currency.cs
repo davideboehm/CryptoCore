@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Core.Functional;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -6,6 +7,21 @@ using System.Threading.Tasks;
 
 namespace CurrencyCore.Coin
 {
+    public class CurrencyUnit : NumericType<CurrencyType>
+    {
+        public new static readonly CurrencyUnit Unit = new CurrencyUnit();
+        public CurrencyUnit(CurrencyType value) : base(value)
+        {
+        }
+        private CurrencyUnit() : base()
+        {
+        }
+        public static implicit operator CurrencyUnit(CurrencyType type)
+        {
+            return new CurrencyUnit(type);
+        }
+    }
+
     public enum CurrencyType
     {
         None,

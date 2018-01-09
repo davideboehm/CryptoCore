@@ -17,11 +17,13 @@
     {        
         protected NetworkCredential NetCredentials;
         protected Uri Uri;
+        protected CurrencyType type;
 
-        public RemoteRPCWallet(Uri uri, NetworkCredential netCredentials)
+        public RemoteRPCWallet(Uri uri, NetworkCredential netCredentials, CurrencyType type)
         {
             this.Uri = uri;
             this.NetCredentials = netCredentials;
+            this.type = type;
         }
 
         public override List<AddressAlias> GetAliasList()
@@ -97,12 +99,13 @@
         {
             var transactions = this.ListTransactions(alias, 30);
 
-            return transactions != null
-                ? (CurrencyAmount)transactions.Where(
+            return 
+                transactions != null
+                ? transactions.Where(
                     transaction => transaction.TransactionCategory == TransactionCategory.Receive &&
-                                   transaction.BlockTime > earliestTimeThatCounts)
-                    .Sum(transaction => transaction.Amount)
-                : (CurrencyAmount)0;
+                                   transaction.BlockTime > earliestTimeThatCounts).Select((transaction) => transaction.Amount)
+                    .Aggregate(CurrencyAmount.Zero, (total, amount) => total + amount)
+                : CurrencyAmount.Zero;
         }
 
         public override List<PublicAddress> GetAddress(AddressAlias alias)
@@ -122,12 +125,12 @@
 
             return bool.Parse(rest["ismine"]);
         }
-
+        
         public override CurrencyAmount GetBalance(AddressAlias alias)
         {
             var result = this.SendCommand("getbalance", alias.ToString());
             var dictionary = JsonConvert.DeserializeObject<Dictionary<string, string>>(result);
-            return (CurrencyAmount)decimal.Parse(dictionary["result"]);
+            return  new CurrencyAmount(decimal.Parse(dictionary["result"]), this.type);
         }
 
         public override List<TransactionRecord> ListTransactions(AddressAlias alias, int count = 10, int skip = 0)

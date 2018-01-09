@@ -119,7 +119,7 @@
                         var coinType = CryptoCurrency.GetCurrencyType(key);
                         if (!result.ContainsKey(coinType))
                         {
-                            result.Add(coinType, (CurrencyAmount)jsonResult[key]);
+                            result.Add(coinType, new CurrencyAmount(jsonResult[key], coinType));
                         }
                     }
                     return Maybe<Dictionary<CurrencyType, CurrencyAmount>>.Some(result);
@@ -173,8 +173,8 @@
                    {
                        var type = trade.Value<string>("type").Equals("sell") ? TradeType.Sell : TradeType.Buy;
                        var date = trade.Value<DateTime>("date");
-                       var rate = (Price)trade.Value<decimal>("rate");
-                       var amount = (CurrencyAmount)trade.Value<decimal>("amount");
+                       var rate = new Price(trade.Value<decimal>("rate"), stockType, currencyType);
+                       var amount = new CurrencyAmount(trade.Value<decimal>("amount"), stockType);
                        result.Add(new CompletedTrade(type, stockType, currencyType, rate, amount, date));
                    }
                    return Maybe.Some(result);
@@ -183,6 +183,7 @@
            },
             secondsTilExpiration: 20);
         }
+                
         public override async ValueTask<Maybe<Dictionary<string, (List<(Price, CurrencyAmount)> asks, List<(Price, CurrencyAmount)> bids)>>> GetOrderBooks(int depth = 50)
         {
             return await this.GetValue<Maybe<Dictionary<string, (List<(Price, CurrencyAmount)> asks, List<(Price, CurrencyAmount)> bids)>>>("orderbook", async () =>
@@ -198,11 +199,16 @@
                 {
                     foreach (var market in response)
                     {
-                        var pair = market.Key;
-                        var data = ParseOrderBook(market.Value);
-                        if (data.Item1.HasValue() && data.Item2.HasValue())
+                        var pair = market.Key.Split('_');
+                        if (pair.Length == 2)
                         {
-                            result.Add(pair, (data.Item1.Value(), data.Item2.Value()));
+                            var currency = Currency.GetCurrencyType(pair[0]);
+                            var stock = Currency.GetCurrencyType(pair[1]);
+                            var data = ParseOrderBook(market.Value, stock, currency);
+                            if (data.Item1.HasValue() && data.Item2.HasValue())
+                            {
+                                result.Add(market.Key, (data.Item1.Value(), data.Item2.Value()));
+                            }
                         }
                     }
                     return Maybe.Some(result);
@@ -245,7 +251,7 @@
 
             if (response != null)
             {
-                book = ParseOrderBook(response);
+                book = ParseOrderBook(response, stockType, currencyType);
             }
             return book;
         });
@@ -267,7 +273,7 @@
                 foreach (JToken offer in offers)
                 {
                     var rate = offer.Value<Decimal>("rate");
-                    var quantity = (CurrencyAmount)offer.Value<Decimal>("amount");
+                    var quantity = new CurrencyAmount(offer.Value<Decimal>("amount"), currencyType);
                     var minLength = new TimeSpan(offer.Value<int>("rangemin"), 0, 0, 0);
                     var maxLength = new TimeSpan(offer.Value<int>("rangemax"), 0, 0, 0);
                     result.Add(new LoanOffer(rate, quantity, minLength, maxLength));
@@ -276,7 +282,8 @@
             }
             return Maybe<List<LoanOffer>>.None;
         }
-        private (Maybe<List<(Price, CurrencyAmount)>>, Maybe<List<(Price, CurrencyAmount)>>) ParseOrderBook(JContainer container)
+
+        private (Maybe<List<(Price, CurrencyAmount)>>, Maybe<List<(Price, CurrencyAmount)>>) ParseOrderBook(JContainer container, CurrencyType stockType, CurrencyType currencyType)
         {
             if (container.Value<int>("isfrozen") == 0)
             {
@@ -294,7 +301,7 @@
                     {
                         coinDecimal = decimal.Parse(ask[1].ToString(), System.Globalization.NumberStyles.Float);
                     }
-                    askList.Add(((Price)priceDecimal, (CurrencyAmount)coinDecimal));
+                    askList.Add((new Price(priceDecimal, stockType, currencyType), new CurrencyAmount(coinDecimal, stockType)));
                 }
                 if (askList.Count > 0)
                 {
@@ -313,7 +320,7 @@
                     {
                         coinDecimal = decimal.Parse(bid[1].ToString(), System.Globalization.NumberStyles.Float);
                     }
-                    bidList.Add(((Price)priceDecimal, (CurrencyAmount)coinDecimal));
+                    bidList.Add((new Price(priceDecimal, stockType, currencyType), new CurrencyAmount(coinDecimal, stockType)));
                 }
                 if (bidList.Count > 0)
                 {
@@ -426,12 +433,12 @@
                                     result.Add((stock, currency), new TickerData(
                                         currencyType: currency,
                                         stockType: stock,
-                                        lowestAsk: data["lowestask"].Value<decimal>(),
-                                        last: data["last"].Value<decimal>(),
-                                        highestBid: data["highestbid"].Value<decimal>(),
-                                        percentChange: data["percentchange"].Value<decimal>(),
-                                        baseVolume: data["basevolume"].Value<decimal>(),
-                                        quoteVolume: data["quotevolume"].Value<decimal>()
+                                        lowestAsk: new Price(data["lowestask"].Value<decimal>(), stock, currency),
+                                        last: new Price(data["last"].Value<decimal>(), stock, currency),
+                                        highestBid: new Price(data["highestbid"].Value<decimal>(), stock, currency),
+                                        percentChange: new Price(data["percentchange"].Value<decimal>(), stock, currency),
+                                        baseVolume: new CurrencyAmount(data["basevolume"].Value<decimal>(), currency),
+                                        quoteVolume: new CurrencyAmount(data["quotevolume"].Value<decimal>(), stock)
                                     ));
                                 }
                             }
